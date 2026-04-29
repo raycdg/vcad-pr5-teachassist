@@ -7,6 +7,9 @@ export default defineConfig({
     vue(),
     vuetify({ autoImport: true }),
   ],
+  build: {
+    chunkSizeWarningLimit: 8192 
+  },
   server: {
     port: 5173,
     proxy: {
