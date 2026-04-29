@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.dotsettings
+*.csproj.user
+[Aa][Rr][Mm]/
+[Rr]elease/
+[Dd]ebug/
+*.dll
+*.exe
+
+# Frontend
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+
+# IDE
+.vs/
+*.swp
+*.swo
+.idea/
+
+# Misc
+*.log

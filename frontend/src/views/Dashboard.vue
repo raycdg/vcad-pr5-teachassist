@@ -10,6 +10,13 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="4">
+        <v-card color="info" variant="tonal">
+          <v-card-title>Disciplines</v-card-title>
+          <v-card-text class="text-h5">{{ disciplineCount }}</v-card-text>
+          <v-card-subtitle>Total disciplines</v-card-subtitle>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="4">
         <v-card color="secondary" variant="tonal">
           <v-card-title>Current Year</v-card-title>
           <v-card-text class="text-h5">{{ currentYear }}</v-card-text>
@@ -49,12 +56,18 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useGroupsStore } from '../stores/groups'
+import { useDisciplinesStore } from '../stores/disciplines'
 
-const store = useGroupsStore()
+const groupsStore = useGroupsStore()
+const disciplinesStore = useDisciplinesStore()
 
-onMounted(() => store.fetchGroups())
+onMounted(() => {
+  groupsStore.fetchGroups()
+  disciplinesStore.fetchDisciplines()
+})
 
-const groupCount = computed(() => store.groups.length)
+const groupCount = computed(() => groupsStore.groups.length)
+const disciplineCount = computed(() => disciplinesStore.disciplines.length)
 const currentYear = computed(() => new Date().getFullYear())
-const recentGroups = computed(() => store.groups.slice(0, 5))
+const recentGroups = computed(() => groupsStore.groups.slice(0, 5))
 </script>

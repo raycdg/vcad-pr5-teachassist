@@ -11,6 +11,7 @@ public class DomainDbContext : DbContext
 
     public DbSet<DomainGroup> Groups => Set<DomainGroup>();
     public DbSet<Student> Students => Set<Student>();
+    public DbSet<Discipline> Disciplines => Set<Discipline>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +45,17 @@ public class DomainDbContext : DbContext
                 .WithMany(g => g.Students)
                 .HasForeignKey(e => e.GroupId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Discipline>(entity =>
+        {
+            entity.ToTable("disciplines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Abbreviation).HasColumnName("abbreviation").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
         });
     }
 }
