@@ -13,6 +13,8 @@ public class DomainDbContext : DbContext
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Discipline> Disciplines => Set<Discipline>();
     public DbSet<DisciplineTask> Tasks => Set<DisciplineTask>();
+    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<StudentGrade> StudentGrades => Set<StudentGrade>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,6 +77,57 @@ public class DomainDbContext : DbContext
             entity.HasOne(e => e.Discipline)
                 .WithMany()
                 .HasForeignKey(e => e.DisciplineId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Course>(entity =>
+        {
+            entity.ToTable("courses");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.DisciplineId).HasColumnName("discipline_id").IsRequired();
+            entity.Property(e => e.GroupId).HasColumnName("group_id").IsRequired();
+            entity.Property(e => e.Year).HasColumnName("year").IsRequired();
+            entity.Property(e => e.IsActive).HasColumnName("is_active").IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+
+            entity.HasOne(e => e.Discipline)
+                .WithMany()
+                .HasForeignKey(e => e.DisciplineId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Group)
+                .WithMany()
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudentGrade>(entity =>
+        {
+            entity.ToTable("student_grades");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.StudentId).HasColumnName("student_id").IsRequired();
+            entity.Property(e => e.DisciplineTaskId).HasColumnName("discipline_task_id").IsRequired();
+            entity.Property(e => e.CourseId).HasColumnName("course_id").IsRequired();
+            entity.Property(e => e.Value).HasColumnName("value").HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+
+            entity.HasOne(e => e.Student)
+                .WithMany()
+                .HasForeignKey(e => e.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.DisciplineTask)
+                .WithMany()
+                .HasForeignKey(e => e.DisciplineTaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Course)
+                .WithMany()
+                .HasForeignKey(e => e.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

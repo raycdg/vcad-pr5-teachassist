@@ -5,6 +5,7 @@
       <v-btn to="/" variant="text">Dashboard</v-btn>
       <v-btn to="/groups" variant="text">Groups</v-btn>
       <v-btn to="/disciplines" variant="text">Disciplines</v-btn>
+      <v-btn to="/courses" variant="text">Courses</v-btn>
     </v-app-bar>
     <v-main>
       <v-container>
