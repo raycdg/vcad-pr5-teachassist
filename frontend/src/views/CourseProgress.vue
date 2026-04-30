@@ -91,6 +91,8 @@
               <v-text-field
                 v-model="grades[`${student.id}_${task.id}`]"
                 :disabled="!progress?.isActive"
+                :type="task.gradingType === 2 ? 'number' : 'text'"
+                :rules="getGradeRules(task)"
                 variant="outlined"
                 density="compact"
                 hide-details
@@ -141,6 +143,20 @@ const filteredStudents = computed(() => {
 
 function markChanged() {
   hasChanges.value = JSON.stringify(grades.value) !== JSON.stringify(originalGrades.value)
+}
+
+function getGradeRules(task) {
+  if (!task) return []
+  if (task.gradingType === 1) {
+    return [v => v === '' || v === '0' || v === '1' || v === 0 || v === 1 || 'Must be 0 or 1']
+  }
+  if (task.gradingType === 2) {
+    const max = task.maxScore ?? 0
+    return [
+      v => v === '' || (Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v) <= max) || `Must be 0-${max}`
+    ]
+  }
+  return []
 }
 
 onMounted(async () => {

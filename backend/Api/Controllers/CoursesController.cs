@@ -195,6 +195,13 @@ public class CoursesController : ControllerBase
                                          g.StudentId == entry.StudentId &&
                                          g.DisciplineTaskId == entry.TaskId);
 
+            var task = await _context.Tasks.FindAsync(entry.TaskId);
+            if (task == null)
+                return BadRequest($"Task with id {entry.TaskId} not found");
+
+            if (!IsValidGrade(entry.Value, task))
+                return BadRequest($"Invalid grade value '{entry.Value}' for task '{task.Name}' (grading type: {task.GradingType})");
+
             if (existing != null)
             {
                 existing.Value = entry.Value;
@@ -214,6 +221,24 @@ public class CoursesController : ControllerBase
 
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    private static bool IsValidGrade(string? value, DisciplineTask task)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return true;
+
+        if (task.GradingType == 1)
+        {
+            return value is "0" or "1";
+        }
+
+        if (task.GradingType == 2)
+        {
+            return int.TryParse(value, out var score) && score >= 0 && score <= (task.MaxScore ?? 0);
+        }
+
+        return false;
     }
 
     private static CourseDto MapToDto(Course c) => new()
