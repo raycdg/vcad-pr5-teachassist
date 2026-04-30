@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using TeachAssist.Api.Controllers;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Options;
+using TeachAssist.Api.Services;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
 
@@ -17,6 +21,17 @@ public class CourseControllerTests
         return new DomainDbContext(options);
     }
 
+    private static GradeNotificationAdapter CreateStubAdapter()
+    {
+        var services = new ServiceCollection();
+        services.AddDbContext<DomainDbContext>(options => options.UseInMemoryDatabase("stub"));
+        services.AddLogging();
+        var provider = services.BuildServiceProvider();
+        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+        var logger = provider.GetRequiredService<ILogger<GradeNotificationAdapter>>();
+        return new GradeNotificationAdapter(new SmtpOptions(), logger, scopeFactory);
+    }
+
     [Fact]
     public async Task GetCourses_ReturnsOnlyActive_ByDefault()
     {
@@ -29,7 +44,7 @@ public class CourseControllerTests
         context.Courses.Add(new Course { Discipline = discipline, Group = group, Year = 2024, IsActive = false });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var actionResult = await controller.GetCourses();
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -49,7 +64,7 @@ public class CourseControllerTests
         context.Courses.Add(new Course { Discipline = discipline, Group = group, Year = 2024, IsActive = false });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var actionResult = await controller.GetCourses(showAll: true);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -67,7 +82,7 @@ public class CourseControllerTests
         context.Groups.Add(group);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new CreateCourseDto { DisciplineId = discipline.Id, GroupId = group.Id, Year = 2024 };
 
         var actionResult = await controller.CreateCourse(dto);
@@ -89,7 +104,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         await controller.ToggleStatus(course.Id);
 
         var updated = await context.Courses.FindAsync(course.Id);
@@ -108,7 +123,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto { Grades = new() };
 
         var result = await controller.SaveGrades(course.Id, dto);
@@ -120,7 +135,7 @@ public class CourseControllerTests
     public async Task GetCourse_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
 
         var actionResult = await controller.GetCourse(999);
 
@@ -139,7 +154,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var actionResult = await controller.GetCourse(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -158,7 +173,7 @@ public class CourseControllerTests
         context.Groups.Add(group);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new CreateCourseDto { DisciplineId = 999, GroupId = group.Id, Year = 2024 };
 
         var actionResult = await controller.CreateCourse(dto);
@@ -174,7 +189,7 @@ public class CourseControllerTests
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new CreateCourseDto { DisciplineId = discipline.Id, GroupId = 999, Year = 2024 };
 
         var actionResult = await controller.CreateCourse(dto);
@@ -186,7 +201,7 @@ public class CourseControllerTests
     public async Task UpdateCourse_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new UpdateCourseDto { DisciplineId = 1, GroupId = 1, Year = 2024, IsActive = true };
 
         var result = await controller.UpdateCourse(999, dto);
@@ -206,7 +221,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new UpdateCourseDto { DisciplineId = 999, GroupId = group.Id, Year = 2024, IsActive = true };
 
         var result = await controller.UpdateCourse(course.Id, dto);
@@ -226,7 +241,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new UpdateCourseDto { DisciplineId = discipline.Id, GroupId = 999, Year = 2024, IsActive = true };
 
         var result = await controller.UpdateCourse(course.Id, dto);
@@ -248,7 +263,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new UpdateCourseDto { DisciplineId = discipline2.Id, GroupId = group2.Id, Year = 2025, IsActive = false };
 
         var result = await controller.UpdateCourse(course.Id, dto);
@@ -265,7 +280,7 @@ public class CourseControllerTests
     public async Task DeleteCourse_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
 
         var result = await controller.DeleteCourse(999);
 
@@ -284,7 +299,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var result = await controller.DeleteCourse(course.Id);
 
         Assert.IsType<NoContentResult>(result);
@@ -295,7 +310,7 @@ public class CourseControllerTests
     public async Task GetProgress_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
 
         var actionResult = await controller.GetProgress(999);
 
@@ -322,7 +337,7 @@ public class CourseControllerTests
         );
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var actionResult = await controller.GetProgress(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -357,7 +372,7 @@ public class CourseControllerTests
         context.StudentGrades.Add(new StudentGrade { StudentId = student.Id, DisciplineTaskId = task.Id, CourseId = course.Id, Value = "1" });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var actionResult = await controller.GetProgress(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -379,7 +394,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var actionResult = await controller.GetProgress(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -393,7 +408,7 @@ public class CourseControllerTests
     public async Task SaveGrades_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto { Grades = new() };
 
         var result = await controller.SaveGrades(999, dto);
@@ -417,7 +432,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -452,7 +467,7 @@ public class CourseControllerTests
         context.StudentGrades.Add(new StudentGrade { StudentId = student.Id, DisciplineTaskId = task.Id, CourseId = course.Id, Value = "0" });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -481,7 +496,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -511,7 +526,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -541,7 +556,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -571,7 +586,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -601,7 +616,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -631,7 +646,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context);
+        var controller = new CoursesController(context, CreateStubAdapter());
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>

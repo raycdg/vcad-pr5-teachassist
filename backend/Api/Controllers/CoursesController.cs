@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Services;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
 
@@ -11,10 +12,12 @@ namespace TeachAssist.Api.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly DomainDbContext _context;
+    private readonly GradeNotificationAdapter _notificationAdapter;
 
-    public CoursesController(DomainDbContext context)
+    public CoursesController(DomainDbContext context, GradeNotificationAdapter notificationAdapter)
     {
         _context = context;
+        _notificationAdapter = notificationAdapter;
     }
 
     [HttpGet]
@@ -220,6 +223,9 @@ public class CoursesController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
+
+        _ = _notificationAdapter.NotifyGradesSavedAsync(id, dto.Grades, CancellationToken.None);
+
         return NoContent();
     }
 
