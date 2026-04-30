@@ -1,11 +1,34 @@
 <template>
   <v-app>
-    <v-app-bar color="primary" density="compact">
+    <v-app-bar
+      color="primary"
+      density="compact"
+    >
       <v-app-bar-title>TeachAssist</v-app-bar-title>
-      <v-btn to="/" variant="text">Dashboard</v-btn>
-      <v-btn to="/groups" variant="text">Groups</v-btn>
-      <v-btn to="/disciplines" variant="text">Disciplines</v-btn>
-      <v-btn to="/courses" variant="text">Courses</v-btn>
+      <v-btn
+        to="/"
+        variant="text"
+      >
+        Dashboard
+      </v-btn>
+      <v-btn
+        to="/groups"
+        variant="text"
+      >
+        Groups
+      </v-btn>
+      <v-btn
+        to="/disciplines"
+        variant="text"
+      >
+        Disciplines
+      </v-btn>
+      <v-btn
+        to="/courses"
+        variant="text"
+      >
+        Courses
+      </v-btn>
     </v-app-bar>
     <v-main>
       <v-container>

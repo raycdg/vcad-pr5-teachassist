@@ -1,17 +1,32 @@
 <template>
   <div>
     <div class="d-flex align-center mb-4">
-      <v-btn icon variant="text" :to="{ name: 'courses' }">
+      <v-btn
+        icon
+        variant="text"
+        :to="{ name: 'courses' }"
+      >
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
-      <h1 class="text-h4 ml-2">{{ progress?.disciplineName }} — {{ progress?.groupName }}</h1>
+      <h1 class="text-h4 ml-2">
+        {{ progress?.disciplineName }} — {{ progress?.groupName }}
+      </h1>
       <v-spacer />
-      <v-chip :color="progress?.isActive ? 'green' : 'grey'" class="mr-2">
+      <v-chip
+        :color="progress?.isActive ? 'green' : 'grey'"
+        class="mr-2"
+      >
         {{ progress?.isActive ? 'Active' : 'Inactive' }}
       </v-chip>
     </div>
 
-    <v-alert v-if="store.error" type="error" closable class="mb-4" @click:close="store.error = null">
+    <v-alert
+      v-if="store.error"
+      type="error"
+      closable
+      class="mb-4"
+      @click:close="store.error = null"
+    >
       {{ store.error }}
     </v-alert>
 
@@ -26,28 +41,53 @@
         style="max-width: 300px"
       />
       <v-spacer />
-      <v-btn color="primary" :disabled="!progress?.isActive || !hasChanges" :loading="saving" @click="saveGrades">
+      <v-btn
+        color="primary"
+        :disabled="!progress?.isActive || !hasChanges"
+        :loading="saving"
+        @click="saveGrades"
+      >
         Save
       </v-btn>
     </div>
 
-    <div class="table-wrapper" style="overflow-x: auto; max-height: 70vh; overflow-y: auto;">
+    <div
+      class="table-wrapper"
+      style="overflow-x: auto; max-height: 70vh; overflow-y: auto;"
+    >
       <table class="grade-table">
         <thead>
           <tr>
-            <th class="sticky-col">Student</th>
-            <th v-for="task in tasks" :key="task.id" class="text-center">
-              <div class="text-caption">{{ task.number }}</div>
-              <div class="text-caption font-weight-bold">{{ task.name }}</div>
+            <th class="sticky-col">
+              Student
+            </th>
+            <th
+              v-for="task in tasks"
+              :key="task.id"
+              class="text-center"
+            >
+              <div class="text-caption">
+                {{ task.number }}
+              </div>
+              <div class="text-caption font-weight-bold">
+                {{ task.name }}
+              </div>
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="student in filteredStudents" :key="student.id">
+          <tr
+            v-for="student in filteredStudents"
+            :key="student.id"
+          >
             <td class="sticky-col">
               {{ student.lastName }} {{ student.firstName }}
             </td>
-            <td v-for="task in tasks" :key="task.id" class="text-center">
+            <td
+              v-for="task in tasks"
+              :key="task.id"
+              class="text-center"
+            >
               <v-text-field
                 v-model="grades[`${student.id}_${task.id}`]"
                 :disabled="!progress?.isActive"
@@ -86,12 +126,12 @@ const students = computed(() => progress.value?.students || [])
 const tasks = computed(() => progress.value?.tasks || [])
 
 const filteredStudents = computed(() => {
-  if (!filter.value) return students.value.sort((a, b) => {
+  if (!filter.value) return [...students.value].sort((a, b) => {
     const cmp = a.lastName.localeCompare(b.lastName)
     return cmp !== 0 ? cmp : a.firstName.localeCompare(b.firstName)
   })
   const q = filter.value.toLowerCase()
-  return students.value.filter(s =>
+  return [...students.value].filter(s =>
     s.firstName.toLowerCase().includes(q) || s.lastName.toLowerCase().includes(q)
   ).sort((a, b) => {
     const cmp = a.lastName.localeCompare(b.lastName)

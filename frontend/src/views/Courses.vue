@@ -1,15 +1,31 @@
 <template>
   <div>
     <div class="d-flex align-center mb-4">
-      <h1 class="text-h4">Courses</h1>
+      <h1 class="text-h4">
+        Courses
+      </h1>
       <v-spacer />
-      <v-btn variant="text" @click="toggleShowAll">
+      <v-btn
+        variant="text"
+        @click="toggleShowAll"
+      >
         {{ showAll ? 'Hide inactive' : 'Show all courses' }}
       </v-btn>
-      <v-btn color="primary" @click="openCreate">Add Course</v-btn>
+      <v-btn
+        color="primary"
+        @click="openCreate"
+      >
+        Add Course
+      </v-btn>
     </div>
 
-    <v-alert v-if="store.error" type="error" closable class="mb-4" @click:close="store.error = null">
+    <v-alert
+      v-if="store.error"
+      type="error"
+      closable
+      class="mb-4"
+      @click:close="store.error = null"
+    >
       {{ store.error }}
     </v-alert>
 
@@ -20,53 +36,131 @@
       item-value="id"
     >
       <template #item.isActive="{ item }">
-        <v-chip :color="item.isActive ? 'green' : 'grey'" size="small">
+        <v-chip
+          :color="item.isActive ? 'green' : 'grey'"
+          size="small"
+        >
           {{ item.isActive ? 'Active' : 'Inactive' }}
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <v-btn icon size="small" variant="text" :to="`/courses/${item.id}/progress`">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          :to="`/courses/${item.id}/progress`"
+        >
           <v-icon>mdi-table</v-icon>
         </v-btn>
-        <v-btn icon size="small" variant="text" @click="openEdit(item)">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          @click="openEdit(item)"
+        >
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
-        <v-btn icon size="small" variant="text" @click="toggleCourseStatus(item)">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          @click="toggleCourseStatus(item)"
+        >
           <v-icon>{{ item.isActive ? 'mdi-close' : 'mdi-check' }}</v-icon>
         </v-btn>
-        <v-btn icon size="small" variant="text" color="error" @click="confirmDelete(item)">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          color="error"
+          @click="confirmDelete(item)"
+        >
           <v-icon>mdi-delete</v-icon>
         </v-btn>
       </template>
     </v-data-table>
 
-    <v-dialog v-model="dialog" max-width="500">
+    <v-dialog
+      v-model="dialog"
+      max-width="500"
+    >
       <v-card>
         <v-card-title>{{ formTitle }}</v-card-title>
         <v-card-text>
-          <v-form ref="formRef" @submit.prevent="save">
-            <v-select v-model="form.disciplineId" :items="disciplines" item-title="name" item-value="id" label="Discipline" :rules="[v => !!v || 'Required']" />
-            <v-select v-model="form.groupId" :items="groups" item-title="name" item-value="id" label="Group" :rules="[v => !!v || 'Required']" />
-            <v-text-field v-model.number="form.year" label="Year" type="number" :rules="[v => !!v || 'Required']" />
-            <v-checkbox v-if="editId" v-model="form.isActive" label="Active" />
+          <v-form
+            ref="formRef"
+            @submit.prevent="save"
+          >
+            <v-select
+              v-model="form.disciplineId"
+              :items="disciplines"
+              item-title="name"
+              item-value="id"
+              label="Discipline"
+              :rules="[v => !!v || 'Required']"
+            />
+            <v-select
+              v-model="form.groupId"
+              :items="groups"
+              item-title="name"
+              item-value="id"
+              label="Group"
+              :rules="[v => !!v || 'Required']"
+            />
+            <v-text-field
+              v-model.number="form.year"
+              label="Year"
+              type="number"
+              :rules="[v => !!v || 'Required']"
+            />
+            <v-checkbox
+              v-if="editId"
+              v-model="form.isActive"
+              label="Active"
+            />
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save">Save</v-btn>
+          <v-btn
+            variant="text"
+            @click="dialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="saving"
+            @click="save"
+          >
+            Save
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
+    <v-dialog
+      v-model="deleteDialog"
+      max-width="400"
+    >
       <v-card>
         <v-card-title>Delete Course</v-card-title>
         <v-card-text>Are you sure you want to delete this course?</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" :loading="deleting" @click="doDelete">Delete</v-btn>
+          <v-btn
+            variant="text"
+            @click="deleteDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="deleting"
+            @click="doDelete"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

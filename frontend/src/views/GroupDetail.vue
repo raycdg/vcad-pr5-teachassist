@@ -1,21 +1,42 @@
 <template>
   <div>
     <div class="d-flex align-center mb-4">
-      <v-btn variant="text" @click="router.push('/groups')">
-        <v-icon start>mdi-arrow-left</v-icon>
+      <v-btn
+        variant="text"
+        @click="router.push('/groups')"
+      >
+        <v-icon start>
+          mdi-arrow-left
+        </v-icon>
         Back to Groups
       </v-btn>
       <v-spacer />
-      <h1 class="text-h4">{{ group?.name || 'Loading...' }}</h1>
+      <h1 class="text-h4">
+        {{ group?.name || 'Loading...' }}
+      </h1>
       <v-spacer />
-      <v-btn color="primary" @click="openCreate">Add Student</v-btn>
+      <v-btn
+        color="primary"
+        @click="openCreate"
+      >
+        Add Student
+      </v-btn>
     </div>
 
-    <v-alert v-if="store.error" type="error" closable class="mb-4" @click:close="store.error = null">
+    <v-alert
+      v-if="store.error"
+      type="error"
+      closable
+      class="mb-4"
+      @click:close="store.error = null"
+    >
       {{ store.error }}
     </v-alert>
 
-    <v-card v-if="group" class="mb-4">
+    <v-card
+      v-if="group"
+      class="mb-4"
+    >
       <v-card-text>
         <div class="d-flex gap-4">
           <div><strong>Short Name:</strong> {{ group.shortName }}</div>
@@ -32,20 +53,37 @@
       item-value="id"
     >
       <template #item.actions="{ item }">
-        <v-btn icon size="small" variant="text" @click="openEdit(item)">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          @click="openEdit(item)"
+        >
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
-        <v-btn icon size="small" variant="text" color="error" @click="confirmDelete(item)">
+        <v-btn
+          icon
+          size="small"
+          variant="text"
+          color="error"
+          @click="confirmDelete(item)"
+        >
           <v-icon>mdi-delete</v-icon>
         </v-btn>
       </template>
     </v-data-table>
 
-    <v-dialog v-model="dialog" max-width="500">
+    <v-dialog
+      v-model="dialog"
+      max-width="500"
+    >
       <v-card>
         <v-card-title>{{ formTitle }}</v-card-title>
         <v-card-text>
-          <v-form ref="formRef" @submit.prevent="save">
+          <v-form
+            ref="formRef"
+            @submit.prevent="save"
+          >
             <v-text-field
               v-model="form.firstName"
               label="First Name"
@@ -68,20 +106,45 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save">Save</v-btn>
+          <v-btn
+            variant="text"
+            @click="dialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="saving"
+            @click="save"
+          >
+            Save
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
+    <v-dialog
+      v-model="deleteDialog"
+      max-width="400"
+    >
       <v-card>
         <v-card-title>Delete Student</v-card-title>
         <v-card-text>Are you sure you want to delete "{{ deleteTarget?.firstName }} {{ deleteTarget?.lastName }}"?</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" :loading="deleting" @click="doDelete">Delete</v-btn>
+          <v-btn
+            variant="text"
+            @click="deleteDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="deleting"
+            @click="doDelete"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -29,6 +29,8 @@
 ## Frontend
 - **Размещение**: вся UI часть размещается в `frontend/`
 - **Формы ввода**: валидация всего пользовательского ввода
+- **Линтер**: ESLint + eslint-plugin-vue + eslint-plugin-vuetify (flat config)
+- **Команды**: `npm run lint` — проверка, `npm run lint:fix` — автоисправление
 
 ## Ограничения
 - никогда не читай файлы *.prompt
