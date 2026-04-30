@@ -151,7 +151,8 @@ onMounted(async () => {
   if (data.students && data.tasks) {
     for (const s of data.students) {
       for (const t of data.tasks) {
-        gradeEntries[`${s.id}_${t.id}`] = ''
+        const key = `${s.id}_${t.id}`
+        gradeEntries[key] = data.grades?.[key] ?? ''
       }
     }
   }

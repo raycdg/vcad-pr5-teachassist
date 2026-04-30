@@ -172,7 +172,8 @@ public class CoursesController : ControllerBase
             GroupName = course.Group.Name,
             IsActive = course.IsActive,
             Students = students,
-            Tasks = tasks
+            Tasks = tasks,
+            Grades = gradesDict
         };
 
         return Ok(progress);

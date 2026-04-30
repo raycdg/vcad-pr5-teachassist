@@ -49,6 +49,7 @@ public class CourseProgressDto
     public bool IsActive { get; set; }
     public List<StudentProgressDto> Students { get; set; } = new();
     public List<TaskProgressDto> Tasks { get; set; } = new();
+    public Dictionary<string, string?> Grades { get; set; } = new();
 }
 
 public class StudentProgressDto
