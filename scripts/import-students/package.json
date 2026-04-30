@@ -1,0 +1,12 @@
+{
+  "name": "import-students",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "import": "node import.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "pg": "^8.11.3"
+  }
+}
