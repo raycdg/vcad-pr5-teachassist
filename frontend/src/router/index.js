@@ -6,8 +6,10 @@ import Disciplines from '../views/Disciplines.vue'
 import Tasks from '../views/Tasks.vue'
 import Courses from '../views/Courses.vue'
 import CourseProgress from '../views/CourseProgress.vue'
+import Login from '../views/Login.vue'
 
 const routes = [
+  { path: '/login', name: 'login', component: Login, meta: { requiresAuth: false } },
   { path: '/', component: Dashboard },
   { path: '/groups', component: Groups },
   { path: '/groups/:id', component: GroupDetail },
@@ -20,6 +22,16 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('auth_token')
+  if (to.name !== 'login' && !token) {
+    return { name: 'login' }
+  }
+  if (to.name === 'login' && token) {
+    return { path: '/' }
+  }
 })
 
 export default router

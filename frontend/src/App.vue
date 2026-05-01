@@ -29,6 +29,20 @@
       >
         Courses
       </v-btn>
+      <v-spacer />
+      <span
+        v-if="authStore.email"
+        class="text-subtitle-2 mr-2"
+      >
+        {{ authStore.email }}
+      </span>
+      <v-btn
+        v-if="authStore.isLoggedIn"
+        variant="text"
+        @click="handleLogout"
+      >
+        Logout
+      </v-btn>
     </v-app-bar>
     <v-main>
       <v-container>
@@ -37,3 +51,16 @@
     </v-main>
   </v-app>
 </template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+import { useAuthStore } from './stores/auth'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
+}
+</script>
