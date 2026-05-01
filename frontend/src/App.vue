@@ -29,12 +29,19 @@
       >
         Courses
       </v-btn>
+      <v-btn
+        v-if="authStore.isAdmin"
+        to="/admin/users"
+        variant="text"
+      >
+        Users
+      </v-btn>
       <v-spacer />
       <span
         v-if="authStore.email"
         class="text-subtitle-2 mr-2"
       >
-        {{ authStore.email }}
+        {{ authStore.email }} ({{ authStore.role }})
       </span>
       <v-btn
         v-if="authStore.isLoggedIn"

@@ -66,7 +66,10 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
+});
 
 builder.Services.AddScoped<GradeNotificationAdapter>();
 
@@ -80,9 +83,16 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var authContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     var adminEmail = "admin@teachassis.local";
     var adminPassword = "admin";
+
+    var adminRoleName = "Admin";
+    if (!await roleManager.RoleExistsAsync(adminRoleName))
+    {
+        await roleManager.CreateAsync(new IdentityRole(adminRoleName));
+    }
 
     var existingAdmin = await userManager.Users
         .IgnoreQueryFilters()
@@ -103,6 +113,7 @@ using (var scope = app.Services.CreateScope())
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
             throw new InvalidOperationException($"Failed to seed admin user: {errors}");
         }
+        await userManager.AddToRoleAsync(admin, adminRoleName);
     }
     else if (existingAdmin.IsDeleted)
     {
@@ -125,6 +136,20 @@ using (var scope = app.Services.CreateScope())
                 var errors = string.Join(", ", resetResult.Errors.Select(e => e.Description));
                 throw new InvalidOperationException($"Failed to reset admin password: {errors}");
             }
+        }
+
+        var roles = await userManager.GetRolesAsync(existingAdmin);
+        if (!roles.Contains(adminRoleName))
+        {
+            await userManager.AddToRoleAsync(existingAdmin, adminRoleName);
+        }
+    }
+    else
+    {
+        var roles = await userManager.GetRolesAsync(existingAdmin);
+        if (!roles.Contains(adminRoleName))
+        {
+            await userManager.AddToRoleAsync(existingAdmin, adminRoleName);
         }
     }
 }

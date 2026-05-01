@@ -5,11 +5,13 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('auth_token') || null,
     email: localStorage.getItem('auth_email') || null,
+    role: localStorage.getItem('auth_role') || null,
     loading: false,
     error: null,
   }),
   getters: {
     isLoggedIn: (state) => !!state.token,
+    isAdmin: (state) => state.role === 'Admin',
   },
   actions: {
     async login(email, password) {
@@ -19,8 +21,10 @@ export const useAuthStore = defineStore('auth', {
         const res = await axios.post('/api/auth/login', { email, password })
         this.token = res.data.token
         this.email = res.data.email
+        this.role = res.data.role
         localStorage.setItem('auth_token', res.data.token)
         localStorage.setItem('auth_email', res.data.email)
+        localStorage.setItem('auth_role', res.data.role)
       } catch (err) {
         this.error = err.response?.data?.message || 'Login failed'
         throw err
@@ -31,8 +35,10 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       this.token = null
       this.email = null
+      this.role = null
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_email')
+      localStorage.removeItem('auth_role')
     },
   },
 })

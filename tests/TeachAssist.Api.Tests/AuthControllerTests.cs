@@ -116,4 +116,31 @@ public class AuthControllerTests
 
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
+
+    [Fact]
+    public async Task Login_ReturnsRole_WhenUserHasRole()
+    {
+        await using var context = CreateInMemoryContext(nameof(Login_ReturnsRole_WhenUserHasRole));
+        var userManager = CreateUserManager(context);
+        var roleManager = new RoleManager<IdentityRole>(
+            new RoleStore<IdentityRole>(context),
+            Array.Empty<IRoleValidator<IdentityRole>>(),
+            new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(),
+            null!
+        );
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+        var user = new AppUser { UserName = "admin@test.local", Email = "admin@test.local" };
+        await userManager.CreateAsync(user, "admin");
+        await userManager.AddToRoleAsync(user, "Admin");
+
+        var controller = CreateController(context);
+        var request = new LoginRequest { Email = "admin@test.local", Password = "admin" };
+
+        var result = await controller.Login(request);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<LoginResponse>(okResult.Value);
+        Assert.Equal("Admin", response.Role);
+    }
 }

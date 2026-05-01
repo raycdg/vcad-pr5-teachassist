@@ -37,16 +37,18 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid email or password" });
         }
 
-        var token = GenerateJwtToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = GenerateJwtToken(user, roles);
 
         return Ok(new LoginResponse
         {
             Token = token,
-            Email = user.Email!
+            Email = user.Email!,
+            Role = roles.FirstOrDefault() ?? string.Empty,
         });
     }
 
-    private string GenerateJwtToken(AppUser user)
+    private string GenerateJwtToken(AppUser user, IList<string> roles)
     {
         var jwtSettings = _configuration.GetSection("Jwt");
         var secretKey = jwtSettings["SecretKey"]!;
@@ -63,6 +65,11 @@ public class AuthController : ControllerBase
             new(JwtRegisteredClaimNames.Email, user.Email!),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var token = new JwtSecurityToken(
             issuer: issuer,

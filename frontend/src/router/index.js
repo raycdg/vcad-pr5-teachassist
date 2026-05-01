@@ -17,6 +17,7 @@ const routes = [
   { path: '/disciplines/:id/tasks', component: Tasks },
   { path: '/courses', name: 'courses', component: Courses },
   { path: '/courses/:id/progress', name: 'course-progress', component: CourseProgress },
+  { path: '/admin/users', name: 'admin-users', component: () => import('../views/admin/Users.vue'), meta: { requiresAdmin: true } },
 ]
 
 const router = createRouter({
@@ -26,10 +27,15 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('auth_token')
+  const role = localStorage.getItem('auth_role')
+
   if (to.name !== 'login' && !token) {
     return { name: 'login' }
   }
   if (to.name === 'login' && token) {
+    return { path: '/' }
+  }
+  if (to.meta.requiresAdmin && role !== 'Admin') {
     return { path: '/' }
   }
 })
