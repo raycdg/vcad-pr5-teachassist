@@ -69,6 +69,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("RequireManager", policy => policy.RequireRole("Manager", "Admin"));
+    options.AddPolicy("RequireTeacher", policy => policy.RequireRole("Teacher", "Manager", "Admin"));
 });
 
 builder.Services.AddScoped<GradeNotificationAdapter>();
@@ -85,14 +87,18 @@ using (var scope = app.Services.CreateScope())
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var authContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+
+    var roleNames = new[] { "Admin", "Manager", "Teacher" };
+    foreach (var roleName in roleNames)
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+        {
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+    }
+
     var adminEmail = "admin@teachassis.local";
     var adminPassword = "admin";
-
-    var adminRoleName = "Admin";
-    if (!await roleManager.RoleExistsAsync(adminRoleName))
-    {
-        await roleManager.CreateAsync(new IdentityRole(adminRoleName));
-    }
 
     var existingAdmin = await userManager.Users
         .IgnoreQueryFilters()
@@ -113,7 +119,7 @@ using (var scope = app.Services.CreateScope())
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
             throw new InvalidOperationException($"Failed to seed admin user: {errors}");
         }
-        await userManager.AddToRoleAsync(admin, adminRoleName);
+        await userManager.AddToRoleAsync(admin, "Admin");
     }
     else if (existingAdmin.IsDeleted)
     {
@@ -139,17 +145,17 @@ using (var scope = app.Services.CreateScope())
         }
 
         var roles = await userManager.GetRolesAsync(existingAdmin);
-        if (!roles.Contains(adminRoleName))
+        if (!roles.Contains("Admin"))
         {
-            await userManager.AddToRoleAsync(existingAdmin, adminRoleName);
+            await userManager.AddToRoleAsync(existingAdmin, "Admin");
         }
     }
     else
     {
         var roles = await userManager.GetRolesAsync(existingAdmin);
-        if (!roles.Contains(adminRoleName))
+        if (!roles.Contains("Admin"))
         {
-            await userManager.AddToRoleAsync(existingAdmin, adminRoleName);
+            await userManager.AddToRoleAsync(existingAdmin, "Admin");
         }
     }
 }

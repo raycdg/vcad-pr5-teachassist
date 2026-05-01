@@ -7,6 +7,7 @@ import Tasks from '../views/Tasks.vue'
 import Courses from '../views/Courses.vue'
 import CourseProgress from '../views/CourseProgress.vue'
 import Login from '../views/Login.vue'
+import Profile from '../views/Profile.vue'
 
 const routes = [
   { path: '/login', name: 'login', component: Login, meta: { requiresAuth: false } },
@@ -18,6 +19,7 @@ const routes = [
   { path: '/courses', name: 'courses', component: Courses },
   { path: '/courses/:id/progress', name: 'course-progress', component: CourseProgress },
   { path: '/admin/users', name: 'admin-users', component: () => import('../views/admin/Users.vue'), meta: { requiresAdmin: true } },
+  { path: '/profile', name: 'profile', component: Profile },
 ]
 
 const router = createRouter({

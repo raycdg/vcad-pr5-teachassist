@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TeachAssist.Api.DTOs;
@@ -8,6 +9,7 @@ namespace TeachAssist.Api.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize(Policy = "RequireManager")]
 public class StudentsController : ControllerBase
 {
     private readonly DomainDbContext _context;

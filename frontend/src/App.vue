@@ -37,6 +37,13 @@
         Users
       </v-btn>
       <v-spacer />
+      <v-btn
+        v-if="authStore.isLoggedIn"
+        to="/profile"
+        variant="text"
+      >
+        Profile
+      </v-btn>
       <span
         v-if="authStore.email"
         class="text-subtitle-2 mr-2"

@@ -45,6 +45,7 @@ public class AuthController : ControllerBase
             Token = token,
             Email = user.Email!,
             Role = roles.FirstOrDefault() ?? string.Empty,
+            UserId = user.Id,
         });
     }
 
@@ -64,11 +65,13 @@ public class AuthController : ControllerBase
             new(JwtRegisteredClaimNames.Sub, user.Id),
             new(JwtRegisteredClaimNames.Email, user.Email!),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("userId", user.Id),
+            new("email", user.Email!),
         };
 
         foreach (var role in roles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim("role", role));
         }
 
         var token = new JwtSecurityToken(
