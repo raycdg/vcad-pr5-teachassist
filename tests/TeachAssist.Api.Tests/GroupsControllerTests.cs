@@ -217,7 +217,9 @@ public class GroupsControllerTests
 
         await Task.WhenAll(task1, task2);
 
-        var results = new[] { task1.Result.Result, task2.Result.Result };
+        var result1 = await task1;
+        var result2 = await task2;
+        var results = new[] { result1.Result, result2.Result };
         var hasBadRequest = results.Any(r => r is BadRequestObjectResult);
 
         Assert.True(hasBadRequest, "At least one request should return BadRequest to prevent duplicate in race condition");
@@ -238,7 +240,9 @@ public class GroupsControllerTests
 
         await Task.WhenAll(task1, task2);
 
-        var results = new[] { task1.Result.Result, task2.Result.Result };
+        var result1 = await task1;
+        var result2 = await task2;
+        var results = new[] { result1.Result, result2.Result };
         var hasBadRequest = results.Any(r => r is BadRequestObjectResult);
         var hasCreated = results.Any(r => r is CreatedAtActionResult);
 
