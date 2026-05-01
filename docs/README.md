@@ -42,8 +42,9 @@ teachassist-5/
 │   │       ├── DisciplineDtos.cs     # DTOs для предметов
 │   │       ├── TaskDtos.cs           # DTOs для заданий
 │   │       └── CourseDtos.cs         # DTOs для курсов (Итерация 2)
-│   ├── Migrations/                  # EF Core миграции
-│   └── Api.Tests/                   # Unit тесты
+│   └── Migrations/                  # EF Core миграции
+├── tests/
+│   └── TeachAssist.Api.Tests/       # Unit тесты (xUnit)
 ├── frontend/
 │   ├── vite.config.js               # Конфигурация Vite
 │   ├── package.json
@@ -286,9 +287,7 @@ dotnet ef database update
 ## Тесты
 
 ```bash
-cd backend
-dotnet test
-# 27 тестов (10 для GroupsController + 13 для StudentsController + 4 для CoursesController)
+dotnet test tests/TeachAssist.Api.Tests/TeachAssist.Api.Tests.csproj
 ```
 
 ### Тесты GroupsController
