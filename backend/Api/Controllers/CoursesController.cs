@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TeachAssist.Api.Authorization;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Models;
 using TeachAssist.Api.Services;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
@@ -15,16 +18,28 @@ public class CoursesController : ControllerBase
 {
     private readonly DomainDbContext _context;
     private readonly GradeNotificationAdapter _notificationAdapter;
+    private readonly UserManager<AppUser> _userManager;
+    private readonly IAuthorizationService _authorization;
 
-    public CoursesController(DomainDbContext context, GradeNotificationAdapter notificationAdapter)
+    public CoursesController(
+        DomainDbContext context,
+        GradeNotificationAdapter notificationAdapter,
+        UserManager<AppUser> userManager,
+        IAuthorizationService authorization)
     {
         _context = context;
         _notificationAdapter = notificationAdapter;
+        _userManager = userManager;
+        _authorization = authorization;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses([FromQuery] bool showAll = false)
     {
+        var user = await _userManager.GetUserAsync(User);
+        var isManagerOrAdmin = await _userManager.IsInRoleAsync(user!, "Manager") ||
+                              await _userManager.IsInRoleAsync(user!, "Admin");
+
         var query = _context.Courses
             .Include(c => c.Discipline)
             .Include(c => c.Group)
@@ -33,6 +48,15 @@ public class CoursesController : ControllerBase
         if (!showAll)
         {
             query = query.Where(c => c.IsActive);
+        }
+
+        // Teachers see only their courses
+        if (!isManagerOrAdmin)
+        {
+            var teacherCourses = _context.CourseTeachers
+                .Where(ct => ct.TeacherId == user!.Id)
+                .Select(ct => ct.CourseId);
+            query = query.Where(c => teacherCourses.Contains(c.Id));
         }
 
         var courses = await query
@@ -53,12 +77,21 @@ public class CoursesController : ControllerBase
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (course == null) return NotFound();
+
+        // Check if teacher can access this course
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Manager") ||
+                                        await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Admin")))
+            return Forbid();
+
         return Ok(MapToDto(course));
     }
 
     [HttpPost]
     public async Task<ActionResult<CourseDto>> CreateCourse(CreateCourseDto dto)
     {
+        // Teachers can create courses on any discipline, so we don't restrict discipline access
         var disciplineExists = await _context.Disciplines.AnyAsync(d => d.Id == dto.DisciplineId);
         var groupExists = await _context.Groups.AnyAsync(g => g.Id == dto.GroupId);
 
@@ -76,6 +109,18 @@ public class CoursesController : ControllerBase
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
 
+        // Automatically assign the creator teacher to the course
+        var user = await _userManager.GetUserAsync(User);
+        if (user != null)
+        {
+            _context.CourseTeachers.Add(new CourseTeacher
+            {
+                CourseId = course.Id,
+                TeacherId = user.Id
+            });
+            await _context.SaveChangesAsync();
+        }
+
         var created = await _context.Courses
             .Include(c => c.Discipline)
             .Include(c => c.Group)
@@ -87,6 +132,12 @@ public class CoursesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateCourse(int id, UpdateCourseDto dto)
     {
+        // Check if teacher can edit this course
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         var course = await _context.Courses.FindAsync(id);
         if (course == null) return NotFound();
 
@@ -109,6 +160,12 @@ public class CoursesController : ControllerBase
     [HttpPatch("{id}/toggle-status")]
     public async Task<IActionResult> ToggleStatus(int id)
     {
+        // Check if teacher can toggle status of this course
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         var course = await _context.Courses.FindAsync(id);
         if (course == null) return NotFound();
 
@@ -122,6 +179,12 @@ public class CoursesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCourse(int id)
     {
+        // Check if teacher can delete this course
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         var course = await _context.Courses.FindAsync(id);
         if (course == null) return NotFound();
 
@@ -133,6 +196,13 @@ public class CoursesController : ControllerBase
     [HttpGet("{id}/progress")]
     public async Task<ActionResult<CourseProgressDto>> GetProgress(int id)
     {
+        // Check if teacher can access progress of this course
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Manager") ||
+                                        await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Admin")))
+            return Forbid();
+
         var course = await _context.Courses
             .Include(c => c.Discipline)
             .Include(c => c.Group)
@@ -187,6 +257,12 @@ public class CoursesController : ControllerBase
     [HttpPost("{id}/grades")]
     public async Task<IActionResult> SaveGrades(int id, BulkSaveGradesDto dto)
     {
+        // Check if teacher can save grades for this course
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         var course = await _context.Courses.FindAsync(id);
         if (course == null) return NotFound();
 
@@ -228,6 +304,49 @@ public class CoursesController : ControllerBase
 
         _ = _notificationAdapter.NotifyGradesSavedAsync(id, dto.Grades, CancellationToken.None);
 
+        return NoContent();
+    }
+
+    [HttpPost("{id}/assign-teacher")]
+    [Authorize(Policy = "RequireManager")]
+    public async Task<IActionResult> AssignTeacher(int id, [FromBody] AssignTeacherDto dto)
+    {
+        var course = await _context.Courses.FindAsync(id);
+        if (course == null)
+            return NotFound(new { message = $"Course with id {id} not found." });
+
+        var teacher = await _userManager.FindByIdAsync(dto.TeacherId);
+        if (teacher == null)
+            return BadRequest(new { message = "Teacher not found." });
+
+        var exists = await _context.CourseTeachers
+            .AnyAsync(ct => ct.CourseId == id && ct.TeacherId == dto.TeacherId);
+
+        if (exists)
+            return BadRequest(new { message = "Teacher already assigned to this course." });
+
+        _context.CourseTeachers.Add(new CourseTeacher
+        {
+            CourseId = id,
+            TeacherId = dto.TeacherId
+        });
+
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpDelete("{id}/teachers/{teacherId}")]
+    [Authorize(Policy = "RequireManager")]
+    public async Task<IActionResult> RemoveTeacher(int id, string teacherId)
+    {
+        var assignment = await _context.CourseTeachers
+            .FirstOrDefaultAsync(ct => ct.CourseId == id && ct.TeacherId == teacherId);
+
+        if (assignment == null)
+            return NotFound(new { message = "Teacher not assigned to this course." });
+
+        _context.CourseTeachers.Remove(assignment);
+        await _context.SaveChangesAsync();
         return NoContent();
     }
 

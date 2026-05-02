@@ -1,13 +1,23 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Moq;
+using System.Security.Claims;
+using TeachAssist.Api.Authorization;
 using TeachAssist.Api.Controllers;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Models;
 using TeachAssist.Api.Options;
 using TeachAssist.Api.Services;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
+using TeachAssist.Api.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace TeachAssist.Api.Tests;
 
@@ -32,6 +42,59 @@ public class CourseControllerTests
         return new GradeNotificationAdapter(new SmtpOptions(), logger, scopeFactory);
     }
 
+    private static UserManager<AppUser> CreateUserManager(AppUser? user = null)
+    {
+        var store = new Mock<IUserStore<AppUser>>();
+        if (user != null)
+        {
+            store.Setup(s => s.FindByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(user);
+        }
+        return new UserManager<AppUser>(
+            store.Object,
+            null!,
+            new PasswordHasher<AppUser>(),
+            Array.Empty<IUserValidator<AppUser>>(),
+            Array.Empty<IPasswordValidator<AppUser>>(),
+            new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(),
+            null!,
+            null!);
+    }
+
+    private static CoursesController CreateController(
+        DomainDbContext context,
+        GradeNotificationAdapter adapter,
+        string? userId = null,
+        AppUser? user = null)
+    {
+        var userManager = CreateUserManager(user);
+        var controller = new CoursesController(context, adapter, userManager, CreateMockAuthorizationService());
+
+        if (user != null)
+        {
+            var claims = new List<Claim> {
+                new Claim(System.Security.Claims.ClaimTypes.NameIdentifier, user.Id),
+                new Claim("userId", user.Id)
+            };
+            var identity = new ClaimsIdentity(claims, "TestAuth");
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+            };
+        }
+
+        return controller;
+    }
+
+    private static IAuthorizationService CreateMockAuthorizationService()
+    {
+        var mock = new Mock<IAuthorizationService>();
+        mock.Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success);
+        return mock.Object;
+    }
+
     [Fact]
     public async Task GetCourses_ReturnsOnlyActive_ByDefault()
     {
@@ -44,7 +107,45 @@ public class CourseControllerTests
         context.Courses.Add(new Course { Discipline = discipline, Group = group, Year = 2024, IsActive = false });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        // Create AuthDbContext with user and role
+        var authOptions = new DbContextOptionsBuilder<AuthDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var authContext = new AuthDbContext(authOptions);
+        var userStore = new UserStore<AppUser>(authContext);
+        var userManager = new UserManager<AppUser>(
+            userStore,
+            null!,
+            new PasswordHasher<AppUser>(),
+            Array.Empty<IUserValidator<AppUser>>(),
+            Array.Empty<IPasswordValidator<AppUser>>(),
+            new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(),
+            null!,
+            null!);
+        var roleStore = new RoleStore<IdentityRole>(authContext);
+        var roleManager = new RoleManager<IdentityRole>(
+            roleStore,
+            Array.Empty<IRoleValidator<IdentityRole>>(),
+            new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(),
+            null!);
+        await roleManager.CreateAsync(new IdentityRole("Manager"));
+        var user = new AppUser { Id = Guid.NewGuid().ToString(), UserName = "manager" };
+        await userManager.CreateAsync(user);
+        await userManager.AddToRoleAsync(user, "Manager");
+
+        var controller = new CoursesController(context, CreateStubAdapter(), userManager, CreateMockAuthorizationService());
+        var claims = new List<Claim> {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim("userId", user.Id)
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+
         var actionResult = await controller.GetCourses();
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -64,7 +165,45 @@ public class CourseControllerTests
         context.Courses.Add(new Course { Discipline = discipline, Group = group, Year = 2024, IsActive = false });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        // Create AuthDbContext with user and role
+        var authOptions = new DbContextOptionsBuilder<AuthDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var authContext = new AuthDbContext(authOptions);
+        var userStore = new UserStore<AppUser>(authContext);
+        var userManager = new UserManager<AppUser>(
+            userStore,
+            null!,
+            new PasswordHasher<AppUser>(),
+            Array.Empty<IUserValidator<AppUser>>(),
+            Array.Empty<IPasswordValidator<AppUser>>(),
+            new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(),
+            null!,
+            null!);
+        var roleStore = new RoleStore<IdentityRole>(authContext);
+        var roleManager = new RoleManager<IdentityRole>(
+            roleStore,
+            Array.Empty<IRoleValidator<IdentityRole>>(),
+            new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(),
+            null!);
+        await roleManager.CreateAsync(new IdentityRole("Manager"));
+        var user = new AppUser { Id = Guid.NewGuid().ToString(), UserName = "manager" };
+        await userManager.CreateAsync(user);
+        await userManager.AddToRoleAsync(user, "Manager");
+
+        var controller = new CoursesController(context, CreateStubAdapter(), userManager, CreateMockAuthorizationService());
+        var claims = new List<Claim> {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim("userId", user.Id)
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+
         var actionResult = await controller.GetCourses(showAll: true);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -82,7 +221,8 @@ public class CourseControllerTests
         context.Groups.Add(group);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var user = new AppUser { Id = Guid.NewGuid().ToString() };
+        var controller = CreateController(context, CreateStubAdapter(), user: user);
         var dto = new CreateCourseDto { DisciplineId = discipline.Id, GroupId = group.Id, Year = 2024 };
 
         var actionResult = await controller.CreateCourse(dto);
@@ -104,7 +244,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         await controller.ToggleStatus(course.Id);
 
         var updated = await context.Courses.FindAsync(course.Id);
@@ -123,7 +263,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto { Grades = new() };
 
         var result = await controller.SaveGrades(course.Id, dto);
@@ -135,7 +275,7 @@ public class CourseControllerTests
     public async Task GetCourse_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
 
         var actionResult = await controller.GetCourse(999);
 
@@ -154,7 +294,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var actionResult = await controller.GetCourse(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -173,7 +313,7 @@ public class CourseControllerTests
         context.Groups.Add(group);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateCourseDto { DisciplineId = 999, GroupId = group.Id, Year = 2024 };
 
         var actionResult = await controller.CreateCourse(dto);
@@ -189,7 +329,7 @@ public class CourseControllerTests
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateCourseDto { DisciplineId = discipline.Id, GroupId = 999, Year = 2024 };
 
         var actionResult = await controller.CreateCourse(dto);
@@ -201,7 +341,7 @@ public class CourseControllerTests
     public async Task UpdateCourse_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateCourseDto { DisciplineId = 1, GroupId = 1, Year = 2024, IsActive = true };
 
         var result = await controller.UpdateCourse(999, dto);
@@ -221,7 +361,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateCourseDto { DisciplineId = 999, GroupId = group.Id, Year = 2024, IsActive = true };
 
         var result = await controller.UpdateCourse(course.Id, dto);
@@ -241,7 +381,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateCourseDto { DisciplineId = discipline.Id, GroupId = 999, Year = 2024, IsActive = true };
 
         var result = await controller.UpdateCourse(course.Id, dto);
@@ -263,7 +403,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateCourseDto { DisciplineId = discipline2.Id, GroupId = group2.Id, Year = 2025, IsActive = false };
 
         var result = await controller.UpdateCourse(course.Id, dto);
@@ -280,7 +420,7 @@ public class CourseControllerTests
     public async Task DeleteCourse_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
 
         var result = await controller.DeleteCourse(999);
 
@@ -299,7 +439,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var result = await controller.DeleteCourse(course.Id);
 
         Assert.IsType<NoContentResult>(result);
@@ -310,7 +450,7 @@ public class CourseControllerTests
     public async Task GetProgress_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
 
         var actionResult = await controller.GetProgress(999);
 
@@ -337,7 +477,7 @@ public class CourseControllerTests
         );
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var actionResult = await controller.GetProgress(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -372,7 +512,7 @@ public class CourseControllerTests
         context.StudentGrades.Add(new StudentGrade { StudentId = student.Id, DisciplineTaskId = task.Id, CourseId = course.Id, Value = "1" });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var actionResult = await controller.GetProgress(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -394,7 +534,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var actionResult = await controller.GetProgress(course.Id);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -408,7 +548,7 @@ public class CourseControllerTests
     public async Task SaveGrades_ReturnsNotFound_WhenCourseDoesNotExist()
     {
         using var context = GetDbContext();
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto { Grades = new() };
 
         var result = await controller.SaveGrades(999, dto);
@@ -432,7 +572,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -467,7 +607,7 @@ public class CourseControllerTests
         context.StudentGrades.Add(new StudentGrade { StudentId = student.Id, DisciplineTaskId = task.Id, CourseId = course.Id, Value = "0" });
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -496,7 +636,7 @@ public class CourseControllerTests
         context.Courses.Add(course);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -526,7 +666,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -556,7 +696,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -586,7 +726,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -616,7 +756,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>
@@ -646,7 +786,7 @@ public class CourseControllerTests
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
 
-        var controller = new CoursesController(context, CreateStubAdapter());
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new BulkSaveGradesDto
         {
             Grades = new List<GradeEntryDto>

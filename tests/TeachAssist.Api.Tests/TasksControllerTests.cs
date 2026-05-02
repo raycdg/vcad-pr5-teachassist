@@ -1,6 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using System.Security.Claims;
+using TeachAssist.Api.Authorization;
 using TeachAssist.Api.Controllers;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Models;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +22,20 @@ public class TasksControllerTests
             .UseInMemoryDatabase(dbName)
             .Options;
         return new DomainDbContext(options);
+    }
+
+    private static UserManager<AppUser> CreateMockUserManager()
+    {
+        var store = new Mock<IUserStore<AppUser>>();
+        return new UserManager<AppUser>(store.Object, null, null, null, null, null, null, null, null);
+    }
+
+    private static IAuthorizationService CreateMockAuthorizationService()
+    {
+        var mock = new Mock<IAuthorizationService>();
+        mock.Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success);
+        return mock.Object;
     }
 
     private static async Task<Discipline> CreateTestDiscipline(DomainDbContext context, int id = 1, string name = "Test Discipline")
@@ -32,7 +53,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(GetTasks_ReturnsEmptyList_WhenNoTasksExist));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.GetTasks(1, null);
 
@@ -52,7 +73,7 @@ public class TasksControllerTests
             new DisciplineTask { DisciplineId = discipline.Id, Number = 2, Name = "Task B", GradingType = 1 }
         );
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.GetTasks(1, null);
 
@@ -75,7 +96,7 @@ public class TasksControllerTests
             new DisciplineTask { DisciplineId = discipline.Id, Number = 3, Name = "Homework", GradingType = 1 }
         );
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.GetTasks(1, "Lab");
 
@@ -92,7 +113,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(CreateTask_ReturnsCreated_WithValidBinaryDto));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new CreateDisciplineTaskDto { Name = "Binary Task", GradingType = 1 };
 
         var result = await controller.CreateTask(1, dto);
@@ -108,7 +129,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(CreateTask_ReturnsCreated_WithValidScoreDto));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new CreateDisciplineTaskDto { Name = "Score Task", GradingType = 2, MaxScore = 100 };
 
         var result = await controller.CreateTask(1, dto);
@@ -123,7 +144,7 @@ public class TasksControllerTests
     public async Task CreateTask_ReturnsNotFound_WhenDisciplineNotFound()
     {
         await using var context = CreateInMemoryContext(nameof(CreateTask_ReturnsNotFound_WhenDisciplineNotFound));
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new CreateDisciplineTaskDto { Name = "Task", GradingType = 1 };
 
         var result = await controller.CreateTask(999, dto);
@@ -136,7 +157,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(CreateTask_ReturnsBadRequest_WhenScoreGradingWithoutMaxScore));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new CreateDisciplineTaskDto { Name = "Task", GradingType = 2, MaxScore = null };
 
         var result = await controller.CreateTask(1, dto);
@@ -154,7 +175,7 @@ public class TasksControllerTests
             new DisciplineTask { DisciplineId = discipline.Id, Number = 2, Name = "Task 2", GradingType = 1 }
         );
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new CreateDisciplineTaskDto { Name = "Task 3", GradingType = 1 };
 
         var result = await controller.CreateTask(1, dto);
@@ -169,7 +190,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(CreateTask_IgnoresMaxScore_ForBinaryGrading));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new CreateDisciplineTaskDto { Name = "Task", GradingType = 1, MaxScore = 50 };
 
         var result = await controller.CreateTask(1, dto);
@@ -186,7 +207,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(UpdateTask_ReturnsNotFound_WhenTaskNotFound));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new UpdateDisciplineTaskDto { Name = "Updated", GradingType = 1 };
 
         var result = await controller.UpdateTask(1, 999, dto);
@@ -203,7 +224,7 @@ public class TasksControllerTests
         var task = new DisciplineTask { DisciplineId = discipline2.Id, Number = 1, Name = "Task", GradingType = 1 };
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new UpdateDisciplineTaskDto { Name = "Updated", GradingType = 1 };
 
         var result = await controller.UpdateTask(1, task.Id, dto);
@@ -219,7 +240,7 @@ public class TasksControllerTests
         var task = new DisciplineTask { DisciplineId = discipline.Id, Number = 1, Name = "Original", GradingType = 1 };
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new UpdateDisciplineTaskDto { Name = "Updated", GradingType = 2, MaxScore = 10 };
 
         var result = await controller.UpdateTask(1, task.Id, dto);
@@ -239,7 +260,7 @@ public class TasksControllerTests
         var task = new DisciplineTask { DisciplineId = discipline.Id, Number = 1, Name = "Task", GradingType = 1 };
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new UpdateDisciplineTaskDto { Name = "Updated", GradingType = 2, MaxScore = null };
 
         var result = await controller.UpdateTask(1, task.Id, dto);
@@ -255,7 +276,7 @@ public class TasksControllerTests
         var task = new DisciplineTask { DisciplineId = discipline.Id, Number = 1, Name = "Task", GradingType = 2, MaxScore = 100 };
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
         var dto = new UpdateDisciplineTaskDto { Name = "Updated", GradingType = 1 };
 
         var result = await controller.UpdateTask(1, task.Id, dto);
@@ -272,7 +293,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(DeleteTask_ReturnsNotFound_WhenTaskNotFound));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.DeleteTask(1, 999);
 
@@ -287,7 +308,7 @@ public class TasksControllerTests
         var task = new DisciplineTask { DisciplineId = discipline.Id, Number = 1, Name = "Task", GradingType = 1 };
         context.Tasks.Add(task);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.DeleteTask(1, task.Id);
 
@@ -305,7 +326,7 @@ public class TasksControllerTests
         var task3 = new DisciplineTask { DisciplineId = discipline.Id, Number = 3, Name = "Task 3", GradingType = 1 };
         context.Tasks.AddRange(task1, task2, task3);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.DeleteTask(1, task2.Id);
 
@@ -327,7 +348,7 @@ public class TasksControllerTests
         var task2 = new DisciplineTask { DisciplineId = discipline2.Id, Number = 1, Name = "Task 2", GradingType = 1 };
         context.Tasks.Add(task2);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         await controller.DeleteTask(1, task1.Id);
 
@@ -343,7 +364,7 @@ public class TasksControllerTests
     {
         await using var context = CreateInMemoryContext(nameof(ChangePriority_ReturnsNotFound_WhenTaskNotFound));
         await CreateTestDiscipline(context);
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.ChangePriority(1, 999, "up");
 
@@ -359,7 +380,7 @@ public class TasksControllerTests
         var task2 = new DisciplineTask { DisciplineId = discipline.Id, Number = 2, Name = "Task 2", GradingType = 1 };
         context.Tasks.AddRange(task1, task2);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.ChangePriority(1, task2.Id, "up");
 
@@ -379,7 +400,7 @@ public class TasksControllerTests
         var task2 = new DisciplineTask { DisciplineId = discipline.Id, Number = 2, Name = "Task 2", GradingType = 1 };
         context.Tasks.AddRange(task1, task2);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.ChangePriority(1, task1.Id, "down");
 
@@ -400,7 +421,7 @@ public class TasksControllerTests
         var task3 = new DisciplineTask { DisciplineId = discipline.Id, Number = 3, Name = "Task 3", GradingType = 1 };
         context.Tasks.AddRange(task1, task2, task3);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.ChangePriority(1, task1.Id, "up");
 
@@ -417,7 +438,7 @@ public class TasksControllerTests
         var task3 = new DisciplineTask { DisciplineId = discipline.Id, Number = 3, Name = "Task 3", GradingType = 1 };
         context.Tasks.AddRange(task1, task2, task3);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         var result = await controller.ChangePriority(1, task3.Id, "down");
 
@@ -433,7 +454,7 @@ public class TasksControllerTests
         var task2 = new DisciplineTask { DisciplineId = discipline.Id, Number = 2, Name = "Task 2", GradingType = 1, UpdatedAt = DateTime.UtcNow.AddDays(-1) };
         context.Tasks.AddRange(task1, task2);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         await controller.ChangePriority(1, task2.Id, "up");
 
@@ -455,7 +476,7 @@ public class TasksControllerTests
         var task2b = new DisciplineTask { DisciplineId = discipline2.Id, Number = 2, Name = "Task 2b", GradingType = 1 };
         context.Tasks.AddRange(task1a, task1b, task2a, task2b);
         await context.SaveChangesAsync();
-        var controller = new TasksController(context);
+        var controller = new TasksController(context, CreateMockUserManager(), CreateMockAuthorizationService());
 
         await controller.ChangePriority(1, task1b.Id, "up");
 

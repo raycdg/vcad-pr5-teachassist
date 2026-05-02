@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace TeachAssist.Domain.Models;
 
 public class Course
@@ -11,4 +13,6 @@ public class Course
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<CourseTeacher> CourseTeachers { get; set; } = new List<CourseTeacher>();
 }

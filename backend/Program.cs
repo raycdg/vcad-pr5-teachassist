@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+// Remove HttpContextAccessor registration if present
 
 var smtpOptions = builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions();
 builder.Services.AddSingleton(smtpOptions);
@@ -72,6 +74,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireManager", policy => policy.RequireRole("Manager", "Admin"));
     options.AddPolicy("RequireTeacher", policy => policy.RequireRole("Teacher", "Manager", "Admin"));
 });
+
+builder.Services.AddScoped<IAuthorizationHandler, TeachAssist.Api.Authorization.ResourceOwnerAuthorizationHandler>();
 
 builder.Services.AddScoped<GradeNotificationAdapter>();
 

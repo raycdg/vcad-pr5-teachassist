@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TeachAssist.Api.Authorization;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Models;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
 
@@ -13,15 +16,26 @@ namespace TeachAssist.Api.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly DomainDbContext _context;
+    private readonly UserManager<AppUser> _userManager;
+    private readonly IAuthorizationService _authorization;
 
-    public TasksController(DomainDbContext context)
+    public TasksController(DomainDbContext context, UserManager<AppUser> userManager, IAuthorizationService authorization)
     {
         _context = context;
+        _userManager = userManager;
+        _authorization = authorization;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DisciplineTaskDto>>> GetTasks(int disciplineId, [FromQuery] string? search)
     {
+        // Check if teacher can access this discipline (for read, teachers can see tasks)
+        var requirement = new ResourceAccessRequirement(ResourceType.Discipline, disciplineId);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Manager") ||
+                                        await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Admin")))
+            return Forbid();
+
         var query = _context.Tasks
             .Where(t => t.DisciplineId == disciplineId);
 
@@ -39,6 +53,12 @@ public class TasksController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<DisciplineTaskDto>> CreateTask(int disciplineId, [FromBody] CreateDisciplineTaskDto dto)
     {
+        // Only teachers assigned to discipline can create tasks
+        var requirement = new ResourceAccessRequirement(ResourceType.Discipline, disciplineId);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
@@ -75,6 +95,12 @@ public class TasksController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<DisciplineTaskDto>> UpdateTask(int disciplineId, int id, [FromBody] UpdateDisciplineTaskDto dto)
     {
+        // Only teachers assigned to discipline can update tasks
+        var requirement = new ResourceAccessRequirement(ResourceType.Discipline, disciplineId);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
@@ -99,6 +125,12 @@ public class TasksController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int disciplineId, int id)
     {
+        // Only teachers assigned to discipline can delete tasks
+        var requirement = new ResourceAccessRequirement(ResourceType.Discipline, disciplineId);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         var task = await _context.Tasks
             .FirstOrDefaultAsync(t => t.Id == id && t.DisciplineId == disciplineId);
 
@@ -122,6 +154,12 @@ public class TasksController : ControllerBase
     [HttpPatch("{id}/priority")]
     public async Task<IActionResult> ChangePriority(int disciplineId, int id, [FromQuery] string direction)
     {
+        // Only teachers assigned to discipline can change priority
+        var requirement = new ResourceAccessRequirement(ResourceType.Discipline, disciplineId);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded)
+            return Forbid();
+
         var task = await _context.Tasks
             .FirstOrDefaultAsync(t => t.Id == id && t.DisciplineId == disciplineId);
 

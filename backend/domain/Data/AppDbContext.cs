@@ -15,6 +15,8 @@ public class DomainDbContext : DbContext
     public DbSet<DisciplineTask> Tasks => Set<DisciplineTask>();
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<StudentGrade> StudentGrades => Set<StudentGrade>();
+    public DbSet<DisciplineTeacher> DisciplineTeachers => Set<DisciplineTeacher>();
+    public DbSet<CourseTeacher> CourseTeachers => Set<CourseTeacher>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,6 +129,32 @@ public class DomainDbContext : DbContext
 
             entity.HasOne(e => e.Course)
                 .WithMany()
+                .HasForeignKey(e => e.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DisciplineTeacher>(entity =>
+        {
+            entity.ToTable("discipline_teachers");
+            entity.HasKey(e => new { e.DisciplineId, e.TeacherId });
+            entity.Property(e => e.DisciplineId).HasColumnName("discipline_id");
+            entity.Property(e => e.TeacherId).HasColumnName("teacher_id").HasMaxLength(450);
+
+            entity.HasOne(e => e.Discipline)
+                .WithMany(d => d.DisciplineTeachers)
+                .HasForeignKey(e => e.DisciplineId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CourseTeacher>(entity =>
+        {
+            entity.ToTable("course_teachers");
+            entity.HasKey(e => new { e.CourseId, e.TeacherId });
+            entity.Property(e => e.CourseId).HasColumnName("course_id");
+            entity.Property(e => e.TeacherId).HasColumnName("teacher_id").HasMaxLength(450);
+
+            entity.HasOne(e => e.Course)
+                .WithMany(c => c.CourseTeachers)
                 .HasForeignKey(e => e.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

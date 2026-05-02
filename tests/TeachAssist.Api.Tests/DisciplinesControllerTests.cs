@@ -1,9 +1,19 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using System.Security.Claims;
+using TeachAssist.Api.Authorization;
 using TeachAssist.Api.Controllers;
 using TeachAssist.Api.DTOs;
+using TeachAssist.Api.Models;
+using TeachAssist.Api.Data;
 using TeachAssist.Domain.Data;
 using TeachAssist.Domain.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace TeachAssist.Api.Tests;
 
@@ -17,13 +27,82 @@ public class DisciplinesControllerTests
         return new DomainDbContext(options);
     }
 
+    private static DisciplinesController CreateController(
+        DomainDbContext context,
+        AppUser? user = null)
+    {
+        UserManager<AppUser> userManager;
+        if (user != null)
+        {
+            var dbName = Guid.NewGuid().ToString();
+            var options = new DbContextOptionsBuilder<AuthDbContext>()
+                .UseInMemoryDatabase(dbName)
+                .Options;
+            var authContext = new AuthDbContext(options);
+            var userStore = new UserStore<AppUser>(authContext);
+            userManager = new UserManager<AppUser>(
+                userStore,
+                null!,
+                new PasswordHasher<AppUser>(),
+                Array.Empty<IUserValidator<AppUser>>(),
+                Array.Empty<IPasswordValidator<AppUser>>(),
+                new UpperInvariantLookupNormalizer(),
+                new IdentityErrorDescriber(),
+                null!,
+                null!);
+            if (string.IsNullOrEmpty(user.Id))
+                user.Id = Guid.NewGuid().ToString();
+            userManager.CreateAsync(user).GetAwaiter().GetResult();
+        }
+        else
+        {
+            var store = new Mock<IUserStore<AppUser>>();
+            userManager = new UserManager<AppUser>(
+                store.Object,
+                null!,
+                new PasswordHasher<AppUser>(),
+                Array.Empty<IUserValidator<AppUser>>(),
+                Array.Empty<IPasswordValidator<AppUser>>(),
+                new UpperInvariantLookupNormalizer(),
+                new IdentityErrorDescriber(),
+                null!,
+                null!);
+        }
+
+        var controller = new DisciplinesController(context, userManager, CreateMockAuthorizationService());
+
+        if (user != null)
+        {
+            var claims = new List<Claim> {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim("userId", user.Id)
+            };
+            var identity = new ClaimsIdentity(claims, "TestAuth");
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+            };
+        }
+
+        return controller;
+    }
+
+    private static IAuthorizationService CreateMockAuthorizationService()
+    {
+        var mock = new Mock<IAuthorizationService>();
+        mock.Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success);
+        return mock.Object;
+    }
+
     // ==================== GetDisciplines ====================
 
     [Fact]
     public async Task GetDisciplines_ReturnsEmptyList_WhenNoDisciplinesExist()
     {
         await using var context = CreateInMemoryContext(nameof(GetDisciplines_ReturnsEmptyList_WhenNoDisciplinesExist));
-        var controller = new DisciplinesController(context);
+        var user = new AppUser { Id = Guid.NewGuid().ToString() };
+        var controller = CreateController(context, user);
 
         var result = await controller.GetDisciplines();
 
@@ -42,7 +121,8 @@ public class DisciplinesControllerTests
             new Discipline { Name = "Physics", Abbreviation = "PHY" }
         );
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var user = new AppUser { Id = Guid.NewGuid().ToString() };
+        var controller = CreateController(context, user);
 
         var result = await controller.GetDisciplines();
 
@@ -60,7 +140,7 @@ public class DisciplinesControllerTests
     public async Task GetDiscipline_ReturnsNotFound_WhenDisciplineDoesNotExist()
     {
         await using var context = CreateInMemoryContext(nameof(GetDiscipline_ReturnsNotFound_WhenDisciplineDoesNotExist));
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
 
         var result = await controller.GetDiscipline(999);
 
@@ -74,7 +154,7 @@ public class DisciplinesControllerTests
         var discipline = new Discipline { Name = "Math", Abbreviation = "MTH" };
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
 
         var result = await controller.GetDiscipline(discipline.Id);
 
@@ -90,7 +170,7 @@ public class DisciplinesControllerTests
     public async Task CreateDiscipline_ReturnsCreated_WithValidDto()
     {
         await using var context = CreateInMemoryContext(nameof(CreateDiscipline_ReturnsCreated_WithValidDto));
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateDisciplineDto { Name = "Math", Abbreviation = "MTH" };
 
         var result = await controller.CreateDiscipline(dto);
@@ -108,7 +188,7 @@ public class DisciplinesControllerTests
         await using var context = CreateInMemoryContext(nameof(CreateDiscipline_ReturnsBadRequest_WhenNameExists));
         context.Disciplines.Add(new Discipline { Name = "Math", Abbreviation = "MTH" });
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateDisciplineDto { Name = "Math", Abbreviation = "NEW" };
 
         var result = await controller.CreateDiscipline(dto);
@@ -122,7 +202,7 @@ public class DisciplinesControllerTests
         await using var context = CreateInMemoryContext(nameof(CreateDiscipline_AllowsDuplicateAbbreviation));
         context.Disciplines.Add(new Discipline { Name = "Math", Abbreviation = "MTH" });
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateDisciplineDto { Name = "Advanced Math", Abbreviation = "MTH" };
 
         var result = await controller.CreateDiscipline(dto);
@@ -135,7 +215,7 @@ public class DisciplinesControllerTests
     public async Task CreateDiscipline_SavesCreatedAtAndUpdatedAt()
     {
         await using var context = CreateInMemoryContext(nameof(CreateDiscipline_SavesCreatedAtAndUpdatedAt));
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateDisciplineDto { Name = "Math", Abbreviation = "MTH" };
 
         var result = await controller.CreateDiscipline(dto);
@@ -152,7 +232,7 @@ public class DisciplinesControllerTests
         await using var context = CreateInMemoryContext(nameof(CreateDiscipline_ReturnsBadRequest_WhenDuplicateNameConcurrent));
         context.Disciplines.Add(new Discipline { Name = "Math", Abbreviation = "MTH" });
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new CreateDisciplineDto { Name = "Math", Abbreviation = "NEW" };
 
         var task1 = controller.CreateDiscipline(dto);
@@ -174,7 +254,7 @@ public class DisciplinesControllerTests
     public async Task UpdateDiscipline_ReturnsNotFound_WhenDisciplineDoesNotExist()
     {
         await using var context = CreateInMemoryContext(nameof(UpdateDiscipline_ReturnsNotFound_WhenDisciplineDoesNotExist));
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateDisciplineDto { Name = "Updated", Abbreviation = "UPD" };
 
         var result = await controller.UpdateDiscipline(999, dto);
@@ -189,7 +269,7 @@ public class DisciplinesControllerTests
         var discipline = new Discipline { Name = "Math", Abbreviation = "MTH" };
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateDisciplineDto { Name = "Algebra", Abbreviation = "ALG" };
 
         var result = await controller.UpdateDiscipline(discipline.Id, dto);
@@ -208,7 +288,7 @@ public class DisciplinesControllerTests
         var algebra = new Discipline { Id = 2, Name = "Algebra", Abbreviation = "ALG" };
         context.Disciplines.AddRange(math, algebra);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateDisciplineDto { Name = "Algebra", Abbreviation = "MTH-NEW" };
 
         var result = await controller.UpdateDiscipline(1, dto);
@@ -223,7 +303,7 @@ public class DisciplinesControllerTests
         var discipline = new Discipline { Name = "Math", Abbreviation = "MTH" };
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateDisciplineDto { Name = "Math", Abbreviation = "MTH-NEW" };
 
         var result = await controller.UpdateDiscipline(discipline.Id, dto);
@@ -241,7 +321,7 @@ public class DisciplinesControllerTests
         var discipline = new Discipline { Name = "Math", Abbreviation = "MTH", UpdatedAt = DateTime.UtcNow.AddDays(-1) };
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateDisciplineDto { Name = "Math", Abbreviation = "MTH" };
 
         await controller.UpdateDiscipline(discipline.Id, dto);
@@ -258,7 +338,7 @@ public class DisciplinesControllerTests
         var disciplineB = new Discipline { Id = 2, Name = "Discipline B", Abbreviation = "DB" };
         context.Disciplines.AddRange(disciplineA, disciplineB);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
         var dto = new UpdateDisciplineDto { Name = "Discipline B", Abbreviation = "DA-UPDATED" };
 
         var task1 = controller.UpdateDiscipline(1, dto);
@@ -280,7 +360,7 @@ public class DisciplinesControllerTests
     public async Task DeleteDiscipline_ReturnsNotFound_WhenDisciplineDoesNotExist()
     {
         await using var context = CreateInMemoryContext(nameof(DeleteDiscipline_ReturnsNotFound_WhenDisciplineDoesNotExist));
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
 
         var result = await controller.DeleteDiscipline(999);
 
@@ -294,7 +374,7 @@ public class DisciplinesControllerTests
         var discipline = new Discipline { Name = "Math", Abbreviation = "MTH" };
         context.Disciplines.Add(discipline);
         await context.SaveChangesAsync();
-        var controller = new DisciplinesController(context);
+        var controller = CreateController(context, new AppUser { Id = Guid.NewGuid().ToString() });
 
         var result = await controller.DeleteDiscipline(discipline.Id);
 
