@@ -279,9 +279,28 @@ Vite настроен с проксированием `/api` запросов н
 
 ### Миграции
 
+Проект содержит два контекста данных, поэтому для каждого нужно применять миграции отдельно.
+
+#### DomainDbContext (доменные сущности: группы, студенты, предметы, курсы)
+
 ```bash
 cd backend
-dotnet ef database update
+dotnet ef database update --context DomainDbContext --project TeachAssist.Api.csproj
+```
+
+#### AuthDbContext (Identity: пользователи, роли)
+
+```bash
+cd backend
+dotnet ef database update --context AuthDbContext --project TeachAssist.Api.csproj
+```
+
+Проверка статуса миграций:
+
+```bash
+cd backend
+dotnet ef migrations list --context DomainDbContext --project TeachAssist.Api.csproj
+dotnet ef migrations list --context AuthDbContext --project TeachAssist.Api.csproj
 ```
 
 ## Тесты

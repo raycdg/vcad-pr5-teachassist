@@ -9,11 +9,11 @@ using TeachAssist.Domain.Data;
 
 #nullable disable
 
-namespace TeachAssist.Domain.domain.Migrations
+namespace TeachAssist.Api.Migrations
 {
     [DbContext(typeof(DomainDbContext))]
-    [Migration("20260502073720_AddDisciplineAndCourseTeachers")]
-    partial class AddDisciplineAndCourseTeachers
+    [Migration("20260502140804_AddTeacherRelations")]
+    partial class AddTeacherRelations
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

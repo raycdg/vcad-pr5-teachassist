@@ -29,7 +29,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Host=localhost;Port=5433;Database=teachassist_3_1;Username=postgres;Password=postgres";
 
 builder.Services.AddDbContext<TeachAssist.Domain.Data.DomainDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("TeachAssist.Api")));
 
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseNpgsql(connectionString));

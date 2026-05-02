@@ -68,6 +68,22 @@ namespace TeachAssist.Api.Migrations
                     b.ToTable("courses", (string)null);
                 });
 
+            modelBuilder.Entity("TeachAssist.Domain.Models.CourseTeacher", b =>
+                {
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer")
+                        .HasColumnName("course_id");
+
+                    b.Property<string>("TeacherId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("teacher_id");
+
+                    b.HasKey("CourseId", "TeacherId");
+
+                    b.ToTable("course_teachers", (string)null);
+                });
+
             modelBuilder.Entity("TeachAssist.Domain.Models.Discipline", b =>
                 {
                     b.Property<int>("Id")
@@ -154,6 +170,22 @@ namespace TeachAssist.Api.Migrations
                     b.HasIndex("DisciplineId");
 
                     b.ToTable("discipline_tasks", (string)null);
+                });
+
+            modelBuilder.Entity("TeachAssist.Domain.Models.DisciplineTeacher", b =>
+                {
+                    b.Property<int>("DisciplineId")
+                        .HasColumnType("integer")
+                        .HasColumnName("discipline_id");
+
+                    b.Property<string>("TeacherId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("teacher_id");
+
+                    b.HasKey("DisciplineId", "TeacherId");
+
+                    b.ToTable("discipline_teachers", (string)null);
                 });
 
             modelBuilder.Entity("TeachAssist.Domain.Models.DomainGroup", b =>
@@ -315,10 +347,32 @@ namespace TeachAssist.Api.Migrations
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("TeachAssist.Domain.Models.CourseTeacher", b =>
+                {
+                    b.HasOne("TeachAssist.Domain.Models.Course", "Course")
+                        .WithMany("CourseTeachers")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+                });
+
             modelBuilder.Entity("TeachAssist.Domain.Models.DisciplineTask", b =>
                 {
                     b.HasOne("TeachAssist.Domain.Models.Discipline", "Discipline")
                         .WithMany()
+                        .HasForeignKey("DisciplineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Discipline");
+                });
+
+            modelBuilder.Entity("TeachAssist.Domain.Models.DisciplineTeacher", b =>
+                {
+                    b.HasOne("TeachAssist.Domain.Models.Discipline", "Discipline")
+                        .WithMany("DisciplineTeachers")
                         .HasForeignKey("DisciplineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -362,6 +416,16 @@ namespace TeachAssist.Api.Migrations
                     b.Navigation("DisciplineTask");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("TeachAssist.Domain.Models.Course", b =>
+                {
+                    b.Navigation("CourseTeachers");
+                });
+
+            modelBuilder.Entity("TeachAssist.Domain.Models.Discipline", b =>
+                {
+                    b.Navigation("DisciplineTeachers");
                 });
 
             modelBuilder.Entity("TeachAssist.Domain.Models.DomainGroup", b =>
