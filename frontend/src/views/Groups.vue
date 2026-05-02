@@ -6,6 +6,7 @@
       </h1>
       <v-spacer />
       <v-btn
+        v-if="authStore.isManager"
         color="primary"
         @click="openCreate"
       >
@@ -43,6 +44,7 @@
       </template>
       <template #item.actions="{ item }">
         <v-btn
+          v-if="authStore.isManager"
           icon
           size="small"
           variant="text"
@@ -51,6 +53,7 @@
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isManager"
           icon
           size="small"
           variant="text"
@@ -144,9 +147,11 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGroupsStore } from '../stores/groups'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const store = useGroupsStore()
+const authStore = useAuthStore()
 
 const headers = [
   { title: 'Name', key: 'name' },

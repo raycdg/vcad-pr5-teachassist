@@ -6,6 +6,7 @@
       </h1>
       <v-spacer />
       <v-btn
+        v-if="authStore.isTeacher"
         color="primary"
         @click="openCreate"
       >
@@ -49,6 +50,7 @@
           <v-icon>mdi-clipboard-text</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -57,6 +59,7 @@
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -143,8 +146,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useDisciplinesStore } from '../stores/disciplines'
+import { useAuthStore } from '../stores/auth'
 
 const store = useDisciplinesStore()
+const authStore = useAuthStore()
 
 const headers = [
   { title: 'Name', key: 'name' },

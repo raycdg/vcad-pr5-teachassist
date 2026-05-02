@@ -8,6 +8,7 @@ import '@mdi/font/css/materialdesignicons.css'
 import axios from 'axios'
 import App from './App.vue'
 import router from './router'
+import { roleDirective } from './directives/role'
 
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token')
@@ -41,4 +42,5 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
+app.directive('role', roleDirective)
 app.mount('#app')

@@ -6,6 +6,7 @@
       </h1>
       <v-spacer />
       <v-btn
+        v-if="authStore.isTeacher"
         color="primary"
         @click="openCreate"
       >
@@ -63,6 +64,7 @@
           <v-icon>mdi-arrow-down</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -71,6 +73,7 @@
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -165,9 +168,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTasksStore } from '../stores/tasks'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const store = useTasksStore()
+const authStore = useAuthStore()
 
 const disciplineId = Number(route.params.id)
 

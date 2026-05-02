@@ -6,24 +6,28 @@
     >
       <v-app-bar-title>TeachAssist</v-app-bar-title>
       <v-btn
+        v-if="authStore.isLoggedIn"
         to="/"
         variant="text"
       >
         Dashboard
       </v-btn>
       <v-btn
+        v-if="authStore.isManager"
         to="/groups"
         variant="text"
       >
         Groups
       </v-btn>
       <v-btn
+        v-if="authStore.isTeacher"
         to="/disciplines"
         variant="text"
       >
         Disciplines
       </v-btn>
       <v-btn
+        v-if="authStore.isTeacher"
         to="/courses"
         variant="text"
       >

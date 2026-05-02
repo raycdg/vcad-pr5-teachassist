@@ -16,6 +16,7 @@
       </h1>
       <v-spacer />
       <v-btn
+        v-if="authStore.isManager"
         color="primary"
         @click="openCreate"
       >
@@ -54,6 +55,7 @@
     >
       <template #item.actions="{ item }">
         <v-btn
+          v-if="authStore.isManager"
           icon
           size="small"
           variant="text"
@@ -62,6 +64,7 @@
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isManager"
           icon
           size="small"
           variant="text"
@@ -156,10 +159,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { useStudentsStore } from '../stores/students'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const store = useStudentsStore()
+const authStore = useAuthStore()
 
 const group = ref(null)
 const groupError = ref(null)

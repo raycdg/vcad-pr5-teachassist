@@ -12,6 +12,7 @@
         {{ showAll ? 'Hide inactive' : 'Show all courses' }}
       </v-btn>
       <v-btn
+        v-if="authStore.isTeacher"
         color="primary"
         @click="openCreate"
       >
@@ -53,6 +54,7 @@
           <v-icon>mdi-table</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -61,6 +63,7 @@
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -69,6 +72,7 @@
           <v-icon>{{ item.isActive ? 'mdi-close' : 'mdi-check' }}</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isTeacher"
           icon
           size="small"
           variant="text"
@@ -172,10 +176,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useCoursesStore } from '../stores/courses'
 import { useDisciplinesStore } from '../stores/disciplines'
 import { useGroupsStore } from '../stores/groups'
+import { useAuthStore } from '../stores/auth'
 
 const store = useCoursesStore()
 const disciplinesStore = useDisciplinesStore()
 const groupsStore = useGroupsStore()
+const authStore = useAuthStore()
 
 const showAll = ref(false)
 const dialog = ref(false)

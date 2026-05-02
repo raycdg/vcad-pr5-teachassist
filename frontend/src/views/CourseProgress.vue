@@ -42,6 +42,7 @@
       />
       <v-spacer />
       <v-btn
+        v-if="authStore.isTeacher"
         color="primary"
         :disabled="!progress?.isActive || !hasChanges"
         :loading="saving"
@@ -112,9 +113,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCoursesStore } from '../stores/courses'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const store = useCoursesStore()
+const authStore = useAuthStore()
 
 const courseId = Number(route.params.id)
 const progress = ref(null)
