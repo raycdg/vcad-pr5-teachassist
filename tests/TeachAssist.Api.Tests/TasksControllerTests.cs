@@ -27,7 +27,9 @@ public class TasksControllerTests
     private static UserManager<AppUser> CreateMockUserManager()
     {
         var store = new Mock<IUserStore<AppUser>>();
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
         return new UserManager<AppUser>(store.Object, null, null, null, null, null, null, null, null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
     }
 
     private static IAuthorizationService CreateMockAuthorizationService()

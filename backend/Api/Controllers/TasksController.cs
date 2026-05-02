@@ -32,8 +32,8 @@ public class TasksController : ControllerBase
         // Check if teacher can access this discipline (for read, teachers can see tasks)
         var requirement = new ResourceAccessRequirement(ResourceType.Discipline, disciplineId);
         var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
-        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Manager") ||
-                                        await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Admin")))
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Manager") ||
+                                        await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Admin")))
             return Forbid();
 
         var query = _context.Tasks

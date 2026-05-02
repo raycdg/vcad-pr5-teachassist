@@ -81,8 +81,8 @@ public class CoursesController : ControllerBase
         // Check if teacher can access this course
         var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
         var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
-        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Manager") ||
-                                        await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Admin")))
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Manager") ||
+                                        await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Admin")))
             return Forbid();
 
         return Ok(MapToDto(course));
@@ -199,8 +199,8 @@ public class CoursesController : ControllerBase
         // Check if teacher can access progress of this course
         var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
         var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
-        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Manager") ||
-                                        await _userManager.IsInRoleAsync(await _userManager.GetUserAsync(User), "Admin")))
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Manager") ||
+                                        await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Admin")))
             return Forbid();
 
         var course = await _context.Courses
