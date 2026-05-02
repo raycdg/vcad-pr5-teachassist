@@ -10,7 +10,6 @@ namespace TeachAssist.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "RequireAdmin")]
 public class UsersController : ControllerBase
 {
     private readonly UserManager<AppUser> _userManager;
@@ -25,6 +24,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> GetUsers([FromQuery] bool includeDeleted = false)
     {
         IQueryable<AppUser> query = includeDeleted
@@ -50,7 +50,27 @@ public class UsersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("teachers")]
+    [Authorize(Policy = "RequireManager")]
+    public async Task<IActionResult> GetTeachers()
+    {
+        var users = await _userManager.GetUsersInRoleAsync("Teacher");
+        var result = users
+            .Where(u => !u.IsDeleted)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email ?? string.Empty,
+                Role = "Teacher",
+                IsDeleted = u.IsDeleted,
+                CreatedAt = u.CreatedAt,
+            })
+            .ToList();
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> GetUser(string id)
     {
         var user = await _context.Users
@@ -74,6 +94,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Email))
@@ -133,6 +154,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}/role")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> UpdateUserRole(string id, [FromBody] UpdateUserRoleDto dto)
     {
         var user = await _userManager.FindByIdAsync(id);
@@ -165,6 +187,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}/reset-password")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> ResetPassword(string id, [FromBody] ResetPasswordDto dto)
     {
         var user = await _userManager.FindByIdAsync(id);
@@ -186,6 +209,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteUser(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
@@ -208,6 +232,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id}/restore")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> RestoreUser(string id)
     {
         var user = await _userManager.Users

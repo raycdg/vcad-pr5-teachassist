@@ -174,6 +174,29 @@ public class DisciplinesController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("{id}/teachers")]
+    public async Task<ActionResult<IEnumerable<TeacherDto>>> GetDisciplineTeachers(int id)
+    {
+        var discipline = await _context.Disciplines.FindAsync(id);
+        if (discipline == null)
+            return NotFound(new { message = $"Discipline with id {id} not found." });
+
+        var teacherIds = await _context.DisciplineTeachers
+            .Where(dt => dt.DisciplineId == id)
+            .Select(dt => dt.TeacherId)
+            .ToListAsync();
+
+        var teachers = new List<TeacherDto>();
+        foreach (var tid in teacherIds)
+        {
+            var user = await _userManager.FindByIdAsync(tid);
+            if (user != null && !user.IsDeleted)
+                teachers.Add(new TeacherDto { Id = user.Id, Email = user.Email ?? string.Empty });
+        }
+
+        return Ok(teachers);
+    }
+
     [HttpDelete("{id}/teachers/{teacherId}")]
     [Authorize(Policy = "RequireManager")]
     public async Task<IActionResult> RemoveTeacher(int id, string teacherId)

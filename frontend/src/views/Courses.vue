@@ -54,6 +54,16 @@
           <v-icon>mdi-table</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isManager"
+          icon
+          size="small"
+          variant="text"
+          :to="`/courses/${item.id}/teachers`"
+          color="secondary"
+        >
+          <v-icon>mdi-account-school</v-icon>
+        </v-btn>
+        <v-btn
           v-if="authStore.isTeacher"
           icon
           size="small"

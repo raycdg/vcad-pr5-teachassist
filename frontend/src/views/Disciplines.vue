@@ -50,6 +50,16 @@
           <v-icon>mdi-clipboard-text</v-icon>
         </v-btn>
         <v-btn
+          v-if="authStore.isManager"
+          icon
+          size="small"
+          variant="text"
+          :to="`/disciplines/${item.id}/teachers`"
+          color="secondary"
+        >
+          <v-icon>mdi-account-school</v-icon>
+        </v-btn>
+        <v-btn
           v-if="authStore.isTeacher"
           icon
           size="small"
