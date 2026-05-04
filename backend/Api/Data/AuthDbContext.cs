@@ -15,9 +15,6 @@ public class AuthDbContext : IdentityDbContext<AppUser>
     {
         base.OnModelCreating(builder);
 
-        builder.Ignore<TeachAssist.Domain.Models.CourseTeacher>();
-        builder.Ignore<TeachAssist.Domain.Models.DisciplineTeacher>();
-
         builder.Entity<AppUser>(entity =>
         {
             entity.ToTable("users");

@@ -97,6 +97,7 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseRateLimiter();
+app.UseHttpsRedirection();
 app.MapOpenApi();
 app.UseAuthentication();
 app.UseAuthorization();
