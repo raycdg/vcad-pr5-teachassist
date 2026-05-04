@@ -20,17 +20,20 @@ public class CoursesController : ControllerBase
     private readonly GradeNotificationAdapter _notificationAdapter;
     private readonly UserManager<AppUser> _userManager;
     private readonly IAuthorizationService _authorization;
+    private readonly ILogger<CoursesController>? _logger;
 
     public CoursesController(
         DomainDbContext context,
         GradeNotificationAdapter notificationAdapter,
         UserManager<AppUser> userManager,
-        IAuthorizationService authorization)
+        IAuthorizationService authorization,
+        ILogger<CoursesController>? logger = null)
     {
         _context = context;
         _notificationAdapter = notificationAdapter;
         _userManager = userManager;
         _authorization = authorization;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -302,9 +305,21 @@ public class CoursesController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        _ = _notificationAdapter.NotifyGradesSavedAsync(id, dto.Grades, CancellationToken.None);
+        _ = NotifyGradesSavedSafeAsync(id, dto.Grades);
 
         return NoContent();
+    }
+
+    private async Task NotifyGradesSavedSafeAsync(int courseId, List<GradeEntryDto> grades)
+    {
+        try
+        {
+            await _notificationAdapter.NotifyGradesSavedAsync(courseId, grades, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to send grade notifications for course {CourseId}", courseId);
+        }
     }
 
     [HttpPost("{id}/assign-teacher")]
