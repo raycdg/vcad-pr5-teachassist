@@ -347,13 +347,10 @@ public class CoursesController : ControllerBase
             .Select(ct => ct.TeacherId)
             .ToListAsync();
 
-        var teachers = new List<TeacherDto>();
-        foreach (var tid in teacherIds)
-        {
-            var user = await _userManager.FindByIdAsync(tid);
-            if (user != null && !user.IsDeleted)
-                teachers.Add(new TeacherDto { Id = user.Id, Email = user.Email ?? string.Empty });
-        }
+        var teachers = await _userManager.Users
+            .Where(u => teacherIds.Contains(u.Id) && !u.IsDeleted)
+            .Select(u => new TeacherDto { Id = u.Id, Email = u.Email ?? string.Empty })
+            .ToListAsync();
 
         return Ok(teachers);
     }
