@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using MailKit.Net.Smtp;
 using Microsoft.EntityFrameworkCore;
@@ -130,11 +131,11 @@ public class GradeNotificationAdapter
     private static string BuildEmailBody(Student student, string disciplineName, string disciplineAbbreviation,
         List<GradeEntryDto> grades, Dictionary<int, Domain.Models.DisciplineTask> taskDict)
     {
-        var now = DateTime.Now.ToString("dd.MM.yyyy HH:mm");
+        var now = DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm");
         var html = new StringBuilder();
         html.AppendLine("<html><body>");
-        html.AppendLine($"<p>Уважаемый(ая) {student.FirstName} {student.LastName}!</p>");
-        html.AppendLine($"<p>Вам выставлены оценки по предмету <strong>{disciplineName}</strong> ({disciplineAbbreviation}) на {now}.</p>");
+        html.AppendLine($"<p>Уважаемый(ая) {WebUtility.HtmlEncode(student.FirstName)} {WebUtility.HtmlEncode(student.LastName)}!</p>");
+        html.AppendLine($"<p>Вам выставлены оценки по предмету <strong>{WebUtility.HtmlEncode(disciplineName)}</strong> ({WebUtility.HtmlEncode(disciplineAbbreviation)}) на {WebUtility.HtmlEncode(now)}.</p>");
         html.AppendLine("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse:collapse;'>");
         html.AppendLine("<tr><th>Задание</th><th>Оценка</th></tr>");
 
@@ -143,7 +144,7 @@ public class GradeNotificationAdapter
             var task = taskDict.TryGetValue(grade.TaskId, out var t) ? t : null;
             var taskName = task?.Name ?? $"Задание #{grade.TaskId}";
             var value = string.IsNullOrWhiteSpace(grade.Value) ? "—" : grade.Value;
-            html.AppendLine($"<tr><td>{taskName}</td><td>{value}</td></tr>");
+            html.AppendLine($"<tr><td>{WebUtility.HtmlEncode(taskName)}</td><td>{WebUtility.HtmlEncode(value)}</td></tr>");
         }
 
         html.AppendLine("</table>");
