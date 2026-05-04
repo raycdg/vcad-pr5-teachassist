@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using TeachAssist.Api.Authorization;
 using TeachAssist.Api.Data;
 using TeachAssist.Api.Logging;
+using TeachAssist.Api.Middleware;
 using TeachAssist.Api.Models;
 using TeachAssist.Api.Options;
 using TeachAssist.Api.Services;
@@ -81,6 +83,7 @@ builder.Services.AddScoped<GradeNotificationAdapter>();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.MapOpenApi();
 app.UseAuthentication();
 app.UseAuthorization();
