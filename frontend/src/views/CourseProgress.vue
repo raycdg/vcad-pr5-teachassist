@@ -184,11 +184,12 @@ async function saveGrades() {
   saving.value = true
   try {
     const entries = Object.entries(grades.value)
-      .filter(([, v]) => v !== '')
+      .filter(([key, v]) => v !== '' && v !== originalGrades.value[key])
       .map(([key, value]) => {
         const [studentId, taskId] = key.split('_').map(Number)
         return { studentId, taskId, value }
       })
+    if (entries.length === 0) return
     await store.saveGrades(courseId, entries)
     originalGrades.value = { ...grades.value }
     hasChanges.value = false
