@@ -1,0 +1,22 @@
+Ты работаешь в репозитории teachassist-5.
+
+Прочитай:
+- wf\s11-reuse\reusable-workflows.md
+- .opencode\checklists\checklist-results.md
+- .opencode\templates\template-debug-brief.md
+- .opencode\skills\bugfix-n-verify\SKILL.md
+- wf\s10-amap\autonomy-map-fixed.md
+
+Задача: создать wf\s15-reuse-kit\agent-workflow-kit-ai.md — индекс kit.
+
+Карта должна содержать:
+- таблицу: сценарий / режим автономности / что запускать /
+  как принять / когда остановиться;
+- раздел: какие элементы переносимы между проектами,
+  какие привязаны к StudyFlow;
+- раздел: где находятся постоянные project rules
+  (не дублировать их содержимое);
+- раздел: подтверждение одного реального запуска.
+
+Не создавай новых элементов. Только индекс поверх уже существующих.
+После создания покажи diff.
