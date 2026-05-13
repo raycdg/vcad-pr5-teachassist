@@ -234,3 +234,22 @@
 5. Соблюдать приоритеты проекта: надежность > проверяемость > читаемость > производительность
 6. Любые изменения публичных API требуют явного согласования, даже если они затрагивают только формат ошибок
 7. Все артефакты должны содержать ссылки на конкретные строки кода (формат `path:line`) для верификации
+
+## MCP-инструменты
+
+| Сервер | Инструмент | Риск | Режим автономности | Стоп-сигнал |
+|---|---|---|---|---|
+| Filesystem | `filesystem_list_allowed_directories` | Низкий | Авто | — |
+| Filesystem | `filesystem_create_directory` | Средний | Авто | — |
+| Filesystem | `filesystem_directory_tree` | Низкий | Авто | — |
+| Filesystem | `filesystem_edit_file` | Средний | Авто | — |
+| Filesystem | `filesystem_get_file_info` | Низкий | Авто | — |
+| Filesystem | `filesystem_list_directory` | Низкий | Авто | — |
+| Filesystem | `filesystem_list_directory_with_sizes` | Низкий | Авто | — |
+| Filesystem | `filesystem_move_file` | Средний | Авто/С подтверждением | Перемещение/удаление файлов конфигураций, библиотек, каталогов с содержимым |
+| Filesystem | `filesystem_read_file` | Низкий | Авто | — |
+| Filesystem | `filesystem_read_media_file` | Низкий | Авто | — |
+| Filesystem | `filesystem_read_multiple_files` | Низкий | Авто | — |
+| Filesystem | `filesystem_read_text_file` | Низкий | Авто | — |
+| Filesystem | `filesystem_search_files` | Низкий | Авто | — |
+| Filesystem | `filesystem_write_file` | Средний | Авто | — |

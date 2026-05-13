@@ -14,6 +14,7 @@
 | Bugfix checklist | read-only | `.opencode/checklists/checklist-results.md` | Все пункты чеклиста отмечены, build/test/lint зелёные | Нарушены ограничения AGENTS.md (migrations, API contracts) |
 | Bugfix + verify | read-first | `.opencode/skills/bugfix-n-verify/SKILL.md` | Первопричина исправлена, релевантные тесты проходят, diff-отчёт подготовлен | Выход за пределы границы задачи, изменения в миграциях |
 | Review AI-diff | read-only / local diff | `wf/s14-simple-reuse/command-diff-review.md` | Блокирующие замечания перечислены отдельно, stat diff совпадает с целью | Выход за пределы границы задачи, несогласованные изменения API |
+| code-review-n-report | read-first | skill /code-review-n-report | Отчет сохранен по указаному пути | Нет связанного MCP Filesystem, нет доступа к папке, не указаны объекты для ревью |
 
 ---
 
@@ -64,3 +65,6 @@ Kit был проверен агентом по запросу из `wf/s15-reus
 - `wf/s10-amap/autonomy-map-fixed.md` — карта границ автономности (S1-S7)
 - `wf/s15-reuse-kit/work.md` — план создания kit и результаты проверки
 - `AGENTS.md` — ограничения проекта
+
+---
+
