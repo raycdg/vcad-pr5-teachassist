@@ -4,12 +4,12 @@
         "filesystem": {
             "type": "local",
             "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "E:/vibe-projects/3.4pr/instructor/docs/cli"],
-            "enabled": true
+            "enabled": false
         },
         "dev-tools": {
             "type": "local",
             "command": ["node", "mcp-server/mcp-server.js"],
-            "enabled": true
+            "enabled": false
         }
     }
 }

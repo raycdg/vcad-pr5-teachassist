@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "description": "Запретить чтение файлов *.prompt",
+      "tools": ["read", "edit", "write"],
+      "pattern": "**/*.prompt",
+      "mode": "deny"
+    }
+  ]
+}
