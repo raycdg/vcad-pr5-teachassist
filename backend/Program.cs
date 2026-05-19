@@ -16,6 +16,16 @@ using TeachAssist.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .WithExposedHeaders("Content-Disposition");
+    });
+});
 builder.Services.AddOpenApi();
 
 builder.Services.AddRateLimiter(options =>
@@ -97,6 +107,7 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseRateLimiter();
+app.UseCors();
 app.UseHttpsRedirection();
 app.MapOpenApi();
 app.UseAuthentication();

@@ -799,4 +799,38 @@ public class CourseControllerTests
 
         Assert.IsType<NoContentResult>(result);
     }
+
+    [Fact]
+    public async Task ExportProgress_ReturnsExcelFile()
+    {
+        using var context = GetDbContext();
+        var discipline = new Discipline { Name = "Math", Abbreviation = "MTH" };
+        var group = new DomainGroup { Name = "Group A", ShortName = "GA", YearStarted = 2024 };
+        context.Disciplines.Add(discipline);
+        context.Groups.Add(group);
+        var course = new Course { Discipline = discipline, Group = group, Year = 2024, IsActive = true };
+        context.Courses.Add(course);
+        context.Students.Add(new Student { FirstName = "John", LastName = "Doe", GroupId = group.Id });
+        context.Tasks.Add(new DisciplineTask { DisciplineId = discipline.Id, Number = 1, Name = "Task", GradingType = 1 });
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
+        var result = await controller.ExportProgress(course.Id);
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileResult.ContentType.ToString());
+        Assert.True(fileResult.FileStream.Length > 0);
+        Assert.EndsWith(".xlsx", fileResult.FileDownloadName);
+    }
+
+    [Fact]
+    public async Task ExportProgress_ReturnsNotFound_WhenCourseDoesNotExist()
+    {
+        using var context = GetDbContext();
+        var controller = CreateController(context, CreateStubAdapter(), user: new AppUser { Id = Guid.NewGuid().ToString() });
+
+        var result = await controller.ExportProgress(999);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
 }

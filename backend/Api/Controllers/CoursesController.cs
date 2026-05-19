@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -255,6 +256,110 @@ public class CoursesController : ControllerBase
         };
 
         return Ok(progress);
+    }
+
+    [HttpGet("{id}/export-progress")]
+    public async Task<IActionResult> ExportProgress(int id)
+    {
+        var requirement = new ResourceAccessRequirement(ResourceType.Course, id);
+        var authResult = await _authorization.AuthorizeAsync(User, null, new[] { requirement });
+        if (!authResult.Succeeded && !(await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Manager") ||
+                                        await _userManager.IsInRoleAsync((await _userManager.GetUserAsync(User))!, "Admin")))
+            return Forbid();
+
+        var course = await _context.Courses
+            .Include(c => c.Discipline)
+            .Include(c => c.Group)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (course == null) return NotFound();
+
+        var students = await _context.Students
+            .Where(s => s.GroupId == course.GroupId)
+            .OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
+            .Select(s => new { s.Id, s.FirstName, s.LastName })
+            .ToListAsync();
+
+        var tasks = await _context.Tasks
+            .Where(t => t.DisciplineId == course.DisciplineId)
+            .OrderBy(t => t.Number)
+            .Select(t => new { t.Id, t.Number, t.Name })
+            .ToListAsync();
+
+        var existingGrades = await _context.StudentGrades
+            .Where(g => g.CourseId == id)
+            .ToListAsync();
+
+        var gradesDict = existingGrades.ToDictionary(g => $"{g.StudentId}_{g.DisciplineTaskId}", g => g.Value);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Progress");
+
+        worksheet.Cell(1, 1).Value = $"Subject: {course.Discipline.Name}";
+        worksheet.Cell(1, 1).Style.Font.Bold = true;
+        worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+
+        worksheet.Cell(2, 1).Value = $"Group: {course.Group.Name}";
+        worksheet.Cell(2, 1).Style.Font.Bold = true;
+        worksheet.Cell(2, 1).Style.Font.FontSize = 12;
+
+        worksheet.Cell(3, 1).Value = $"Export Date: {DateTime.UtcNow:dd.MM.yyyy HH:mm:ss}";
+        worksheet.Cell(3, 1).Style.Font.Italic = true;
+
+        var headerRow = 5;
+        var col = 1;
+        worksheet.Cell(headerRow, col++).Value = "№";
+        worksheet.Cell(headerRow, col++).Value = "Student Name";
+        foreach (var task in tasks)
+        {
+            worksheet.Cell(headerRow, col++).Value = $"{task.Number}. {task.Name}";
+        }
+
+        var headerRange = worksheet.Range(headerRow, 1, headerRow, col - 1);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+        headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+        for (var row = 0; row < students.Count; row++)
+        {
+            var student = students[row];
+            var currentRow = headerRow + 1 + row;
+            worksheet.Cell(currentRow, 1).Value = row + 1;
+            worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            worksheet.Cell(currentRow, 2).Value = $"{student.LastName} {student.FirstName}";
+
+            for (var t = 0; t < tasks.Count; t++)
+            {
+                var task = tasks[t];
+                var gradeKey = $"{student.Id}_{task.Id}";
+                var gradeValue = gradesDict.TryGetValue(gradeKey, out var val) ? val : null;
+                worksheet.Cell(currentRow, 3 + t).Value = gradeValue ?? string.Empty;
+                worksheet.Cell(currentRow, 3 + t).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+        }
+
+        if (students.Count > 0)
+        {
+            var dataRange = worksheet.Range(headerRow, 1, headerRow + students.Count, col - 1);
+            dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        }
+        else
+        {
+            var emptyBorderRange = worksheet.Range(headerRow, 1, headerRow, col - 1);
+            emptyBorderRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            emptyBorderRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        var fileName = $"{course.Discipline.Name}_{course.Group.Name}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
+
+        return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
     [HttpPost("{id}/grades")]

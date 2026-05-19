@@ -42,6 +42,17 @@
       />
       <v-spacer />
       <v-btn
+        variant="outlined"
+        color="success"
+        :loading="exporting"
+        @click="exportProgress"
+      >
+        <v-icon start>
+          mdi-file-excel
+        </v-icon>
+        Export to Excel
+      </v-btn>
+      <v-btn
         v-if="authStore.isTeacher"
         color="primary"
         :disabled="!progress?.isActive || !hasChanges"
@@ -114,6 +125,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCoursesStore } from '../stores/courses'
 import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
+
+const API = '/api/courses'
 
 const route = useRoute()
 const store = useCoursesStore()
@@ -126,6 +140,7 @@ const grades = ref({})
 const originalGrades = ref({})
 const hasChanges = ref(false)
 const saving = ref(false)
+const exporting = ref(false)
 
 const students = computed(() => progress.value?.students || [])
 const tasks = computed(() => progress.value?.tasks || [])
@@ -194,6 +209,31 @@ async function saveGrades() {
     originalGrades.value = { ...grades.value }
     hasChanges.value = false
   } finally { saving.value = false }
+}
+
+async function exportProgress() {
+  exporting.value = true
+  try {
+    const response = await axios.get(`${API}/${courseId}/export-progress`, {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    const contentDisposition = response.headers['content-disposition']
+    let fileName = `progress_${courseId}.xlsx`
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match?.[1]) fileName = match[1].replace(/['"]/g, '')
+    }
+    link.setAttribute('download', fileName)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    store.error = err.response?.data?.message || 'Failed to export progress'
+  } finally { exporting.value = false }
 }
 </script>
 
